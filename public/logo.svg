@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="הבית שלנו">
+  <rect width="512" height="512" fill="#c1703d" />
+  <path d="M256 104 L412 248 L100 248 Z" fill="#faf6f0" />
+  <rect x="148" y="248" width="216" height="152" fill="#faf6f0" />
+  <rect x="232" y="336" width="48" height="64" fill="#3a332b" />
+  <circle cx="388" cy="374" r="82" fill="#c1703d" />
+  <circle cx="388" cy="374" r="68" fill="#6e8c78" />
+  <path
+    d="M360 378 L382 400 L420 344"
+    fill="none"
+    stroke="#faf6f0"
+    stroke-width="16"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>
