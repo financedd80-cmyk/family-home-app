@@ -5,10 +5,12 @@ export function RewardsView({
   cumulativePoints,
   weeklyPointsFor,
   onResetWeekly,
+  onResetAllPoints,
 }: {
   cumulativePoints: (name: string) => number;
   weeklyPointsFor: (name: string) => number;
   onResetWeekly: () => void;
+  onResetAllPoints: () => void;
 }) {
   return (
     <div className="flex flex-col gap-4">
@@ -18,13 +20,22 @@ export function RewardsView({
         בלבד.
       </p>
       {isAdmin && (
-        <button
-          type="button"
-          onClick={onResetWeekly}
-          className="self-start rounded-full border border-card-border px-3 py-2 text-xs font-medium text-muted"
-        >
-          איפוס ניקוד שבועי
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={onResetWeekly}
+            className="self-start rounded-full border border-card-border px-3 py-2 text-xs font-medium text-muted"
+          >
+            איפוס ניקוד שבועי
+          </button>
+          <button
+            type="button"
+            onClick={onResetAllPoints}
+            className="self-start rounded-full border border-rose-300 px-3 py-2 text-xs font-medium text-rose-600"
+          >
+            איפוס כל הנקודות
+          </button>
+        </div>
       )}
       <ul className="flex flex-col gap-3">
         {familyMembers.map((member) => (
@@ -65,9 +76,14 @@ export function RewardsView({
         ))}
       </ul>
       <p className="text-xs text-muted">
-        איפוס הניקוד מאפס רק את הניקוד השבועי; הניקוד המצטבר והמשימות עצמן
-        נשמרים במלואם.
+        איפוס ניקוד שבועי מאפס רק את הניקוד השבועי; הניקוד המצטבר והמשימות
+        עצמן נשמרים במלואם.
       </p>
+      {isAdmin && (
+        <p className="text-xs text-muted">
+          בדמו האיפוס מתבצע בזיכרון בלבד. בעתיד הפעולה תישמר בהיסטוריית ניקוד.
+        </p>
+      )}
     </div>
   );
 }

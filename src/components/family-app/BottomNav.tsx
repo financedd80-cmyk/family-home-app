@@ -15,7 +15,7 @@ export function BottomNav({
           key={tab}
           type="button"
           onClick={() => onTabClick(tab)}
-          className={`flex flex-col items-center gap-1 rounded-xl py-2 text-[11px] font-medium ${
+          className={`flex flex-col items-center gap-1 rounded-xl py-2 text-[10px] font-medium ${
             activeTab === tab ? "bg-accent-soft text-accent" : "text-muted"
           }`}
         >

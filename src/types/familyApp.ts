@@ -12,8 +12,21 @@ export type Recurrence =
   | "שבועית"
   | "חודשית"
   | "שנתית";
-export type ActiveTab = "היום" | "יומן" | "משימות" | "ניקוד" | "הוספה";
+export type ActiveTab =
+  | "היום"
+  | "יומן"
+  | "משימות"
+  | "ניקוד"
+  | "משפחה"
+  | "הוספה";
 export type AddKind = "משימה" | "אירוע" | "הסעה" | "תור" | "משימה חוזרת";
+
+export type Permissions = {
+  canEarnPoints: boolean;
+  canEditPoints: boolean;
+  canResetPoints: boolean;
+  canApproveTasks: boolean;
+};
 
 export type FamilyMember = {
   name: string;

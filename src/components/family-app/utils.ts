@@ -1,5 +1,5 @@
 import { HEBREW_DAY_NAMES, TIMEFRAMES } from "@/data/familyDemoData";
-import type { Role, Task, TaskStatus } from "@/types/familyApp";
+import type { Permissions, Role, Task, TaskStatus } from "@/types/familyApp";
 
 export const STATUS_STYLES: Record<TaskStatus, string> = {
   פתוחה: "border border-card-border bg-background text-muted",
@@ -23,6 +23,16 @@ export function roleLabel(role: Role) {
   if (role === "child") return "ילד";
   if (role === "admin") return "הורה · מנהלת";
   return "הורה";
+}
+
+export function getPermissions(role: Role): Permissions {
+  const isAdminRole = role === "admin";
+  return {
+    canEarnPoints: true,
+    canEditPoints: isAdminRole,
+    canResetPoints: isAdminRole,
+    canApproveTasks: isAdminRole,
+  };
 }
 
 export function addDays(date: Date, days: number) {

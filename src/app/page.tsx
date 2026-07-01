@@ -18,6 +18,7 @@ import type {
 import { AddView } from "@/components/family-app/AddView";
 import { BottomNav } from "@/components/family-app/BottomNav";
 import { CalendarView } from "@/components/family-app/CalendarView";
+import { FamilyView } from "@/components/family-app/FamilyView";
 import { RewardsView } from "@/components/family-app/RewardsView";
 import { TasksView } from "@/components/family-app/TasksView";
 import { TodayView } from "@/components/family-app/TodayView";
@@ -33,6 +34,9 @@ export default function Home() {
   const [weeklyBaseline, setWeeklyBaseline] = useState<Record<string, number>>(
     {}
   );
+  const [allTimeBaseline, setAllTimeBaseline] = useState<
+    Record<string, number>
+  >({});
 
   const [activeTab, setActiveTab] = useState<ActiveTab>("היום");
   const [addKind, setAddKind] = useState<AddKind>("משימה");
@@ -41,10 +45,14 @@ export default function Home() {
     emptyFormValues(toISODate(today))
   );
 
-  function cumulativePoints(name: string) {
+  function rawPoints(name: string) {
     return tasks
       .filter((task) => task.assignedTo === name && task.status === "אושרה")
       .reduce((sum, task) => sum + task.points, 0);
+  }
+
+  function cumulativePoints(name: string) {
+    return rawPoints(name) - (allTimeBaseline[name] ?? 0);
   }
 
   function weeklyPointsFor(name: string) {
@@ -221,6 +229,20 @@ export default function Home() {
     setWeeklyBaseline(snapshot);
   }
 
+  function handleResetAllPoints() {
+    const confirmed = window.confirm(
+      "האם את בטוחה? פעולה זו תאפס את כל הניקוד המצטבר של כל בני המשפחה."
+    );
+    if (!confirmed) return;
+
+    const snapshot: Record<string, number> = {};
+    familyMembers.forEach((member) => {
+      snapshot[member.name] = rawPoints(member.name);
+    });
+    setAllTimeBaseline(snapshot);
+    setWeeklyBaseline({});
+  }
+
   return (
     <div className="min-h-screen bg-card-border/30 sm:flex sm:items-center sm:justify-center sm:py-8">
       <div className="mx-auto flex h-screen w-full max-w-md flex-col bg-background sm:h-[840px] sm:overflow-hidden sm:rounded-[2.5rem] sm:border sm:border-card-border sm:shadow-2xl">
@@ -274,8 +296,11 @@ export default function Home() {
               cumulativePoints={cumulativePoints}
               weeklyPointsFor={weeklyPointsFor}
               onResetWeekly={handleResetWeekly}
+              onResetAllPoints={handleResetAllPoints}
             />
           )}
+
+          {activeTab === "משפחה" && <FamilyView />}
 
           {activeTab === "הוספה" && (
             <AddView

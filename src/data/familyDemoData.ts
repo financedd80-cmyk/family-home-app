@@ -43,7 +43,14 @@ export const RECURRENCES: Recurrence[] = [
   "שנתית",
 ];
 
-export const TABS = ["היום", "יומן", "משימות", "ניקוד", "הוספה"] as const;
+export const TABS = [
+  "היום",
+  "יומן",
+  "משימות",
+  "ניקוד",
+  "משפחה",
+  "הוספה",
+] as const;
 export const TIMEFRAMES = ["היום", "השבוע", "החודש", "השנה"] as const;
 export const MEMBER_FILTERS = [
   "כולם",
