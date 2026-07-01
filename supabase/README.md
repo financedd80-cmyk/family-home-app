@@ -4,8 +4,12 @@ This folder contains the **initial database design** for `family-home-app`.
 
 Nothing in this folder is connected to the app yet. There is no Supabase
 client in the codebase, no `.env.local`, and no Auth wiring. This is schema
-planning only, meant to be reviewed before anything is run against a real
+planning, meant to be reviewed before anything is run against a real
 Supabase project.
+
+Status: the tables from `001_initial_family_app_schema.sql` have already
+been created in the Supabase project. `002_seed_initial_family.sql` (see
+"Bootstrap" below) has been prepared but **not yet run**.
 
 ## What's in `migrations/001_initial_family_app_schema.sql`
 
@@ -96,18 +100,57 @@ whether unauthenticated children need a different access model, etc).
 
 ## Order to run
 
-There's only one file right now, so order isn't an issue yet:
-
-1. `migrations/001_initial_family_app_schema.sql`
+1. `migrations/001_initial_family_app_schema.sql` — **already run.**
+2. `migrations/002_seed_initial_family.sql` — prepared, **not yet run**
+   (needs a manual edit first — see "Bootstrap" below).
 
 Future schema changes should be added as new numbered files
-(`002_...sql`, `003_...sql`, ...) rather than editing this one, once it has
+(`003_...sql`, ...) rather than editing either of these once they've
 actually been run somewhere.
 
-## Do not run this yet
+## Bootstrap: seeding the first family (`002_seed_initial_family.sql`)
 
-This file has **not** been executed against any Supabase project. Before
-running it anywhere (including a fresh/throwaway project):
+This is a one-off seed script (not a repeatable schema migration) that
+creates the app's first real data:
+
+- One row in `families`: **משפחת גורן בן חיים**.
+- Five rows in `family_members` under that family:
+  - **דיקלה** — `admin`
+  - **דודו** — `parent`
+  - **דניאל** — `child`
+  - **דור** — `child`
+  - **דוראל** — `child`
+
+Only דיקלה is linked to a real Supabase Auth account (`auth_user_id`) — she's
+the one who needs to log in first as the admin. The rest are `family_members`
+rows without logins for now, same as any child in this schema; they can be
+connected to real Auth accounts later the same way, in a future seed/step.
+
+### Before running it
+
+1. **דיקלה must already have a Supabase Auth account.** Create one first
+   (she signs up normally, or an admin creates her under
+   Authentication → Users in the Supabase Dashboard) if she doesn't have one
+   yet — the script looks her up by email, it doesn't create her account.
+2. Open `002_seed_initial_family.sql` and replace the placeholder at the top
+   of the `do $$ ... $$` block:
+   ```sql
+   v_dikla_email text := 'REPLACE_WITH_DIKLA_EMAIL@example.com';
+   ```
+   with her real login email.
+3. To double check her auth id yourself (optional — the script does this
+   lookup automatically): Supabase Dashboard → Authentication → Users →
+   find her row → the **UID** column is `auth.users.id`. Or run
+   `select id, email from auth.users where email = 'her-email@example.com';`
+   in the SQL Editor.
+4. Run the whole file once in the Supabase SQL Editor.
+
+The script is defensive: it raises an exception (no rows written) if the
+placeholder email wasn't replaced / doesn't match any `auth.users` row, and
+also if a family named **משפחת גורן בן חיים** already exists, so accidentally
+running it twice won't create duplicate data.
+
+## Before running any migration in this folder
 
 - Read through the table definitions and constraints and confirm they match
   the app's actual needs.
@@ -140,13 +183,11 @@ Creating these tables does not, by itself, do any of the following:
 
 ## Suggested next steps (not part of this stage)
 
-1. Review this schema together and adjust anything that doesn't match the
-   product plan.
-2. Stand up a Supabase project and run this migration there (not
-   production) to sanity-check it end to end.
-3. Add the Supabase client and environment variables.
-4. Wire up Auth and decide how children without logins fit into the auth
-   model.
-5. Connect one screen at a time (likely `family_members` and `tasks` first)
+1. Create דיקלה's Supabase Auth account (if not already done) and run
+   `002_seed_initial_family.sql` after filling in her email.
+2. Add the Supabase client and environment variables.
+3. Wire up Auth and decide how the other family members (דודו, and
+   eventually the kids) get connected to their own Auth accounts.
+4. Connect one screen at a time (likely `family_members` and `tasks` first)
    to real data, replacing demo/in-memory state incrementally.
-6. Revisit RLS policies with real `auth.uid()` values before trusting them.
+5. Revisit RLS policies with real `auth.uid()` values before trusting them.
