@@ -11,10 +11,9 @@ import type { FamilyMember } from "@/types/familyApp";
 import { avatarColor, getPermissions, roleLabel } from "./utils";
 
 const CALENDAR_NOTES = [
-  "חיבור יומן מובנה בטלפון יתווסף בשלב מתקדם.",
-  "בשלב ראשון נוסיף אפשרות ‘הוסף ליומן בטלפון’.",
-  "סנכרון מלא עם יומן iPhone/Samsung דורש אפליקציה Native או חיבור לספק היומן.",
-  "אירועים אישיים לא יוצגו למשפחה בלי אישור וסינון.",
+  "כבר אפשר להוסיף אירוע בודד ליומן הטלפון — שיתוף, Google Calendar או הורדת קובץ — דרך כרטיס האירוע בטאב ׳יומן׳.",
+  "מה שעדיין לא קיים הוא סנכרון מלא ודו-כיווני מול יומן iPhone/Android/Samsung, שדורש חיבור לספק היומן (Google/Apple/Samsung).",
+  "כשהסנכרון המלא יתווסף, אירועים אישיים לא יוצגו למשפחה בלי אישור וסינון.",
 ];
 
 const FUTURE_CALENDAR_FILTERS = [
@@ -50,6 +49,7 @@ export function FamilyView({
   members,
   loading,
   error,
+  onGoToCalendar,
 }: {
   session: Session | null;
   authChecked: boolean;
@@ -58,6 +58,9 @@ export function FamilyView({
   members: FamilyMemberRecord[] | null;
   loading: boolean;
   error: string | null;
+  // Navigates to the "יומן" tab — the already-working internal calendar,
+  // as opposed to the "coming soon" personal-calendar sync section below.
+  onGoToCalendar: () => void;
 }) {
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
@@ -221,7 +224,17 @@ export function FamilyView({
       </ul>
 
       <section className="flex flex-col gap-3 rounded-2xl border border-card-border bg-card p-4 shadow-sm">
-        <h2 className="text-base font-semibold">חיבור יומן אישי</h2>
+        <h2 className="text-base font-semibold">סנכרון מלא ליומן אישי — בקרוב</h2>
+        <p className="text-xs text-muted">
+          בינתיים אפשר להוסיף אירוע ליומן הטלפון מתוך כרטיס אירוע ביומן.
+        </p>
+        <button
+          type="button"
+          onClick={onGoToCalendar}
+          className="w-full rounded-2xl bg-accent px-4 py-2.5 text-xs font-semibold text-white"
+        >
+          פתחי את היומן המשפחתי
+        </button>
         <ul className="flex flex-col gap-1.5">
           {CALENDAR_NOTES.map((note) => (
             <li key={note} className="text-xs text-muted">
@@ -234,7 +247,7 @@ export function FamilyView({
           disabled
           className="w-full cursor-not-allowed rounded-2xl border border-dashed border-card-border bg-background px-4 py-2.5 text-xs font-medium text-muted"
         >
-          הוסף ליומן בטלפון — בקרוב
+          סנכרון מלא ליומן אישי — בקרוב
         </button>
         <div className="flex flex-col gap-1.5 border-t border-card-border pt-3">
           <p className="text-xs font-medium text-muted">

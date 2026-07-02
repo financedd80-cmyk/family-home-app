@@ -640,6 +640,7 @@ export default function Home() {
               members={familySession.members}
               loading={familySession.loading}
               error={familySession.error}
+              onGoToCalendar={() => setActiveTab("יומן")}
             />
           )}
 

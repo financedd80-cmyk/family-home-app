@@ -102,7 +102,7 @@ export function TaskCard({
         <button
           type="button"
           onClick={() => setShowCalendarOptions((prev) => !prev)}
-          className="rounded-full border border-card-border px-3 py-1.5 text-xs font-medium text-muted"
+          className="rounded-full border border-accent px-3 py-1.5 text-xs font-semibold text-accent"
         >
           הוסף ליומן
         </button>

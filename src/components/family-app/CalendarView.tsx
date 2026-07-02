@@ -82,7 +82,7 @@ export function CalendarView({
         disabled
         className="w-full cursor-not-allowed rounded-2xl border border-dashed border-card-border bg-card px-4 py-2.5 text-xs font-medium text-muted"
       >
-        חבר ליומן שלי — בקרוב
+        סנכרון מלא ליומן אישי — בקרוב
       </button>
       <div className="flex flex-col gap-4">
         {calendarGroups.map((group) => {
