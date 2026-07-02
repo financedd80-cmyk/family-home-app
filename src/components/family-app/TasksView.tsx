@@ -1,5 +1,10 @@
 import { useState } from "react";
-import { MEMBER_FILTERS, STATUS_FILTERS, TYPE_FILTERS } from "@/data/familyDemoData";
+import {
+  FAMILY_WIDE_ASSIGNEE,
+  MEMBER_FILTERS,
+  STATUS_FILTERS,
+  TYPE_FILTERS,
+} from "@/data/familyDemoData";
 import type { Task } from "@/types/familyApp";
 import { FilterButtons } from "./FilterButtons";
 import { TaskCard } from "./TaskCard";
@@ -38,7 +43,8 @@ export function TasksView({
       (task) =>
         ownTasksOnlyFor ||
         memberFilter === "כולם" ||
-        task.assignedTo === memberFilter
+        task.assignedTo === memberFilter ||
+        task.assignedTo === FAMILY_WIDE_ASSIGNEE
     )
     .filter((task) => statusFilter === "כולם" || task.status === statusFilter)
     .filter((task) => typeFilter === "כולם" || task.type === typeFilter)

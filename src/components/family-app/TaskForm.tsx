@@ -1,5 +1,10 @@
 import type { SubmitEvent } from "react";
-import { RECURRENCES, TASK_STATUSES, TASK_TYPES } from "@/data/familyDemoData";
+import {
+  FAMILY_WIDE_ASSIGNEE,
+  RECURRENCES,
+  TASK_STATUSES,
+  TASK_TYPES,
+} from "@/data/familyDemoData";
 import type {
   FamilyMember,
   Recurrence,
@@ -40,8 +45,19 @@ export function TaskForm({
   const assignableMembers = restrictAssignedToName
     ? members.filter((m) => m.name === restrictAssignedToName)
     : members;
+  const isFamilyWideSelected = values.assignedTo === FAMILY_WIDE_ASSIGNEE;
   const assigneeRole = members.find((m) => m.name === values.assignedTo)?.role;
-  const requiresApprovalLocked = assigneeRole === "child";
+  // "Requires approval" isn't a free choice for either extreme: a child's
+  // own task always needs approval (see supabase/migrations/005), and a
+  // family-wide item has no single assignee to approve for at all (points
+  // are hidden for it too — see the points field below).
+  const forcedRequiresApproval = isFamilyWideSelected
+    ? false
+    : assigneeRole === "child"
+      ? true
+      : null;
+  const requiresApprovalLocked = forcedRequiresApproval !== null;
+  const requiresApprovalValue = forcedRequiresApproval ?? values.requiresApproval;
 
   return (
     <form
@@ -82,17 +98,22 @@ export function TaskForm({
           </select>
         </label>
         <label className="flex flex-col gap-1 text-sm">
-          אחראי / בן משפחה
+          שייך ל / אחראי
           <select
             value={values.assignedTo}
             disabled={!!restrictAssignedToName}
             onChange={(e) => {
               const assignedTo = e.target.value;
+              const isFamilyWide = assignedTo === FAMILY_WIDE_ASSIGNEE;
               const role = members.find((m) => m.name === assignedTo)?.role;
               onChange({
                 ...values,
                 assignedTo,
-                requiresApproval: role === "child",
+                requiresApproval: isFamilyWide ? false : role === "child",
+                // Points aren't tracked per-person for a family-wide item
+                // yet (see the points field below) — clear any leftover
+                // value instead of silently submitting it while hidden.
+                points: isFamilyWide ? "0" : values.points,
               });
             }}
             className="rounded-lg border border-card-border bg-background px-3 py-2.5 text-sm disabled:opacity-60"
@@ -102,6 +123,14 @@ export function TaskForm({
                 {member.name}
               </option>
             ))}
+            {/* A child may only ever add an item for themselves (see
+                supabase/migrations/006), so this option is only offered
+                when the assignee field isn't already locked to them. */}
+            {!restrictAssignedToName && (
+              <option value={FAMILY_WIDE_ASSIGNEE}>
+                {FAMILY_WIDE_ASSIGNEE}
+              </option>
+            )}
           </select>
         </label>
         <div className="grid grid-cols-2 gap-3">
@@ -209,7 +238,7 @@ export function TaskForm({
           </div>
         )}
 
-        {values.type !== "אירוע" && (
+        {values.type !== "אירוע" && !isFamilyWideSelected && (
           <label className="flex flex-col gap-1 text-sm">
             נקודות
             <input
@@ -224,14 +253,18 @@ export function TaskForm({
         <label className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"
-            checked={requiresApprovalLocked ? true : values.requiresApproval}
+            checked={requiresApprovalValue}
             disabled={requiresApprovalLocked}
             onChange={(e) => update("requiresApproval", e.target.checked)}
           />
           דורש אישור הורה
           {requiresApprovalLocked && (
             <span className="text-[11px] text-muted">
-              (תמיד נדרש אישור למשימות של ילד/ה)
+              (
+              {isFamilyWideSelected
+                ? "לא רלוונטי למשימה משפחתית"
+                : "תמיד נדרש אישור למשימות של ילד/ה"}
+              )
             </span>
           )}
         </label>

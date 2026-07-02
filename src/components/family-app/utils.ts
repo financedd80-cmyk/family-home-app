@@ -1,4 +1,8 @@
-import { HEBREW_DAY_NAMES, TIMEFRAMES } from "@/data/familyDemoData";
+import {
+  FAMILY_WIDE_ASSIGNEE,
+  HEBREW_DAY_NAMES,
+  TIMEFRAMES,
+} from "@/data/familyDemoData";
 import type { Permissions, Role, Task, TaskStatus } from "@/types/familyApp";
 
 export const STATUS_STYLES: Record<TaskStatus, string> = {
@@ -41,11 +45,19 @@ function memberPaletteEntry(name: string) {
   return memberPalette[code % memberPalette.length];
 }
 
+// A separate, fixed color (not from the per-member hash palette) for
+// "כל המשפחה" — kept visually distinct from any individual member's color so
+// it never gets confused with, say, דניאל's color by coincidence.
+const FAMILY_WIDE_TAG_COLOR = "bg-indigo-100 text-indigo-700";
+const FAMILY_WIDE_DOT_COLOR = "bg-indigo-500";
+
 export function memberTagColor(name: string) {
+  if (name === FAMILY_WIDE_ASSIGNEE) return FAMILY_WIDE_TAG_COLOR;
   return memberPaletteEntry(name).tag;
 }
 
 export function memberDotColor(name: string) {
+  if (name === FAMILY_WIDE_ASSIGNEE) return FAMILY_WIDE_DOT_COLOR;
   return memberPaletteEntry(name).dot;
 }
 

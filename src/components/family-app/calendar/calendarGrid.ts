@@ -1,4 +1,4 @@
-import { MEMBER_FILTERS } from "@/data/familyDemoData";
+import { FAMILY_WIDE_ASSIGNEE, MEMBER_FILTERS } from "@/data/familyDemoData";
 import type { Task } from "@/types/familyApp";
 import { addDays, memberDotColor, startOfWeek, toISODate } from "../utils";
 
@@ -77,19 +77,23 @@ export function buildDayInfoMap(tasks: Task[]): Map<string, DayInfo> {
     countByDate.set(task.date, (countByDate.get(task.date) ?? 0) + 1);
   });
 
-  // Known family members show first, in a stable order; anyone whose
-  // assignedTo doesn't match the known list (shouldn't normally happen, but
-  // better than silently dropping their dot) is appended after.
+  // A family-wide item shows first when present (usually the most notable
+  // thing going on that day), then known family members in a stable order;
+  // anyone whose assignedTo doesn't match either (shouldn't normally
+  // happen, but better than silently dropping their dot) is appended last.
   const orderedKnown: string[] = MEMBER_FILTERS.filter(
     (name) => name !== "כולם"
   );
   const map = new Map<string, DayInfo>();
   membersByDate.forEach((members, iso) => {
+    const familyWide = members.has(FAMILY_WIDE_ASSIGNEE)
+      ? [FAMILY_WIDE_ASSIGNEE]
+      : [];
     const known = orderedKnown.filter((name) => members.has(name));
     const unknown = Array.from(members).filter(
-      (name) => !orderedKnown.includes(name)
+      (name) => !orderedKnown.includes(name) && name !== FAMILY_WIDE_ASSIGNEE
     );
-    const dotColors = [...known, ...unknown]
+    const dotColors = [...familyWide, ...known, ...unknown]
       .slice(0, 3)
       .map((name) => memberDotColor(name));
     map.set(iso, { dotColors, totalCount: countByDate.get(iso) ?? 0 });

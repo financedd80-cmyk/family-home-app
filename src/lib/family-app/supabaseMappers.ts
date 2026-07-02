@@ -1,3 +1,4 @@
+import { FAMILY_WIDE_ASSIGNEE } from "@/data/familyDemoData";
 import type {
   Recurrence,
   Task,
@@ -125,9 +126,14 @@ export function dbTaskToTask(
     id: row.id,
     title: row.title,
     type: DB_TYPE_TO_TASK_TYPE[row.type],
+    // A null assigned_to_member_id means "כל המשפחה" (family-wide), not
+    // "unassigned" — the app only ever writes null here deliberately, via
+    // taskFormValuesToDbInsert/Update below, when the form's assignee is
+    // the FAMILY_WIDE_ASSIGNEE sentinel (no real member has that name, so
+    // the membersByName lookup there falls through to null on purpose).
     assignedTo: row.assigned_to_member_id
       ? membersById.get(row.assigned_to_member_id) ?? ""
-      : "",
+      : FAMILY_WIDE_ASSIGNEE,
     date: row.date,
     time: trimTime(row.start_time) ?? "",
     endTime: trimTime(row.end_time),

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {
+  FAMILY_WIDE_ASSIGNEE,
   HEBREW_DAY_NAMES,
   HEBREW_MONTH_NAMES,
   MEMBER_FILTERS,
@@ -61,8 +62,13 @@ export function CalendarView({
   const todayISO = toISODate(today);
   const selectedISO = toISODate(selectedDate);
 
+  // A family-wide item is relevant to everyone, so it stays visible under
+  // any specific member filter too — not just "כולם".
   const memberFilteredTasks = tasks.filter(
-    (task) => memberFilter === "כולם" || task.assignedTo === memberFilter
+    (task) =>
+      memberFilter === "כולם" ||
+      task.assignedTo === memberFilter ||
+      task.assignedTo === FAMILY_WIDE_ASSIGNEE
   );
   const calendarTasks = memberFilteredTasks.filter((task) =>
     isInTimeframe(task.date, calendarView, selectedDate)

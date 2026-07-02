@@ -10,6 +10,14 @@ import type {
 
 export const CHILDREN = ["דניאל", "דור", "דוראל"];
 
+// Sentinel "assignee" for a task/event meant for the whole family (a family
+// trip, Friday dinner, a school event) rather than one member. Stored as
+// tasks.assigned_to_member_id = null — that column was already nullable
+// with no constraint requiring a value (see
+// supabase/migrations/001_initial_family_app_schema.sql), so no new
+// migration was needed to support this.
+export const FAMILY_WIDE_ASSIGNEE = "כל המשפחה";
+
 export const familyMembers: FamilyMember[] = [
   { name: "דיקלה", role: "admin" },
   { name: "דודו", role: "parent" },
