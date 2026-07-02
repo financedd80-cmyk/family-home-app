@@ -1,12 +1,14 @@
-import { familyMembers, isAdmin } from "@/data/familyDemoData";
+import { familyMembers } from "@/data/familyDemoData";
 import { avatarColor, roleLabel } from "./utils";
 
 export function RewardsView({
+  isAdmin,
   cumulativePoints,
   weeklyPointsFor,
   onResetWeekly,
   onResetAllPoints,
 }: {
+  isAdmin: boolean;
   cumulativePoints: (name: string) => number;
   weeklyPointsFor: (name: string) => number;
   onResetWeekly: () => void;

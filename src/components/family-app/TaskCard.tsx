@@ -1,13 +1,14 @@
-import { isAdmin } from "@/data/familyDemoData";
 import type { Task } from "@/types/familyApp";
 import { STATUS_STYLES, formatTimeLabel, rideSummary } from "./utils";
 
 export function TaskCard({
   task,
+  canEdit,
   onMarkDone,
   onEdit,
 }: {
   task: Task;
+  canEdit: boolean;
   onMarkDone: () => void;
   onEdit: () => void;
 }) {
@@ -52,7 +53,7 @@ export function TaskCard({
             סמן כבוצע
           </button>
         )}
-        {isAdmin && (
+        {canEdit && (
           <button
             type="button"
             onClick={onEdit}

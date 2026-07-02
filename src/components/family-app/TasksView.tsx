@@ -7,10 +7,12 @@ import { sortByDateTime } from "./utils";
 
 export function TasksView({
   tasks,
+  canManageTasks,
   onMarkDone,
   onEdit,
 }: {
   tasks: Task[];
+  canManageTasks: boolean;
   onMarkDone: (id: string) => void;
   onEdit: (task: Task) => void;
 }) {
@@ -73,6 +75,7 @@ export function TasksView({
           <TaskCard
             key={task.id}
             task={task}
+            canEdit={canManageTasks}
             onMarkDone={() => onMarkDone(task.id)}
             onEdit={() => onEdit(task)}
           />

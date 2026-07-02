@@ -1,4 +1,3 @@
-import { isAdmin } from "@/data/familyDemoData";
 import type { Task } from "@/types/familyApp";
 import { TaskCard } from "./TaskCard";
 import {
@@ -13,12 +12,14 @@ function TaskListSection({
   title,
   tasks,
   emptyText,
+  canEdit,
   onMarkDone,
   onEdit,
 }: {
   title: string;
   tasks: Task[];
   emptyText: string;
+  canEdit: boolean;
   onMarkDone: (id: string) => void;
   onEdit: (task: Task) => void;
 }) {
@@ -35,6 +36,7 @@ function TaskListSection({
             <TaskCard
               key={task.id}
               task={task}
+              canEdit={canEdit}
               onMarkDone={() => onMarkDone(task.id)}
               onEdit={() => onEdit(task)}
             />
@@ -48,6 +50,7 @@ function TaskListSection({
 export function TodayView({
   today,
   tasks,
+  canManageTasks,
   onQuickAdd,
   onMarkDone,
   onEdit,
@@ -57,6 +60,7 @@ export function TodayView({
 }: {
   today: Date;
   tasks: Task[];
+  canManageTasks: boolean;
   onQuickAdd: () => void;
   onMarkDone: (id: string) => void;
   onEdit: (task: Task) => void;
@@ -98,6 +102,7 @@ export function TodayView({
         title="משימות פתוחות להיום"
         tasks={openToday}
         emptyText="אין משימות פתוחות היום"
+        canEdit={canManageTasks}
         onMarkDone={onMarkDone}
         onEdit={onEdit}
       />
@@ -105,6 +110,7 @@ export function TodayView({
         title="הסעות היום"
         tasks={ridesToday}
         emptyText="אין הסעות היום"
+        canEdit={canManageTasks}
         onMarkDone={onMarkDone}
         onEdit={onEdit}
       />
@@ -112,6 +118,7 @@ export function TodayView({
         title="אירועים היום"
         tasks={eventsToday}
         emptyText="אין אירועים היום"
+        canEdit={canManageTasks}
         onMarkDone={onMarkDone}
         onEdit={onEdit}
       />
@@ -144,7 +151,7 @@ export function TodayView({
                       {task.points} נק׳
                     </span>
                   )}
-                  {isAdmin ? (
+                  {canManageTasks ? (
                     <>
                       <button
                         type="button"

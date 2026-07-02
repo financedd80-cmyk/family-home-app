@@ -60,6 +60,18 @@ export default function Home() {
     [familySession.members]
   );
 
+  // The logged-in member's real role when connected; the demo admin
+  // (דיקלה) otherwise. Both admin and parent can manage day-to-day tasks;
+  // full/weekly point resets and family management stay admin-only (see
+  // supabase/migrations/004_add_parent_permissions.sql for the matching
+  // RLS split).
+  const effectiveRole =
+    !demoMode && familySession.currentMember
+      ? familySession.currentMember.role
+      : currentUser.role;
+  const canManageTasks = effectiveRole === "admin" || effectiveRole === "parent";
+  const isAdmin = effectiveRole === "admin";
+
   const [tasks, setTasks] = useState<Task[]>([]);
   const [tasksLoading, setTasksLoading] = useState(true);
   const [tasksError, setTasksError] = useState<string | null>(null);
@@ -484,6 +496,7 @@ export default function Home() {
             <TodayView
               today={today}
               tasks={tasks}
+              canManageTasks={canManageTasks}
               onQuickAdd={openAddForm}
               onMarkDone={handleMarkDone}
               onEdit={openEditForm}
@@ -497,6 +510,7 @@ export default function Home() {
             <CalendarView
               today={today}
               tasks={tasks}
+              canManageTasks={canManageTasks}
               onMarkDone={handleMarkDone}
               onEdit={openEditForm}
             />
@@ -505,6 +519,7 @@ export default function Home() {
           {activeTab === "משימות" && (
             <TasksView
               tasks={tasks}
+              canManageTasks={canManageTasks}
               onMarkDone={handleMarkDone}
               onEdit={openEditForm}
             />
@@ -512,6 +527,7 @@ export default function Home() {
 
           {activeTab === "ניקוד" && (
             <RewardsView
+              isAdmin={isAdmin}
               cumulativePoints={cumulativePoints}
               weeklyPointsFor={weeklyPointsFor}
               onResetWeekly={handleResetWeekly}

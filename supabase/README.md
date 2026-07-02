@@ -115,9 +115,13 @@ deliberately deferred (e.g. non-admin members writing their own data).
 3. `migrations/003_fix_rls_recursion_and_write_policies.sql` — **not run
    from this file yet** (the fix it contains was already applied by hand;
    review before running — see below).
+4. `migrations/004_add_parent_permissions.sql` — depends on 003 (uses its
+   `current_user_role()`/`current_user_family_id()` helpers and its `tasks`/
+   `transportation_details`/`reward_transactions` policies as the ones it
+   replaces) — **not run yet.**
 
 Future schema changes should be added as new numbered files
-(`004_...sql`, ...) rather than editing any of these once they've actually
+(`005_...sql`, ...) rather than editing any of these once they've actually
 been run somewhere.
 
 ## Migration 003: RLS recursion fix + write policies
@@ -147,6 +151,20 @@ Since the recursion fix was already applied by hand directly in Supabase,
 **diff this file against the live policies before running it**, so it
 formalizes what's actually there instead of silently overwriting a
 different hand-patch.
+
+## Migration 004: parent write permissions
+
+`004_add_parent_permissions.sql` extends the `tasks`, `transportation_details`,
+and `reward_transactions` insert/update policies from 003 so `role = 'parent'`
+can use them too, not just `role = 'admin'` — needed once דודו got a real
+login as `parent`. It adds one more helper, `current_user_is_parent_or_admin()`,
+and drops+recreates those three policies to call it instead of
+`current_user_is_admin()`. `family_members` updates and `reward_rules`
+insert/update are deliberately left admin-only (untouched from 003) —
+family/permission management and reward-rule configuration stay an admin
+job. Full/weekly point resets aren't written to the database at all yet
+(see "What's connected now" below), so admin-only for those is enforced in
+the UI, not RLS.
 
 ## Bootstrap: seeding the first family (`002_seed_initial_family.sql`)
 

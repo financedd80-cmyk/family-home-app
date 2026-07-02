@@ -16,11 +16,13 @@ import {
 export function CalendarView({
   today,
   tasks,
+  canManageTasks,
   onMarkDone,
   onEdit,
 }: {
   today: Date;
   tasks: Task[];
+  canManageTasks: boolean;
   onMarkDone: (id: string) => void;
   onEdit: (task: Task) => void;
 }) {
@@ -91,6 +93,7 @@ export function CalendarView({
                     <TaskCard
                       key={task.id}
                       task={task}
+                      canEdit={canManageTasks}
                       onMarkDone={() => onMarkDone(task.id)}
                       onEdit={() => onEdit(task)}
                     />
