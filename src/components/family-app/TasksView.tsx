@@ -64,7 +64,9 @@ export function TasksView({
       <ul className="flex flex-col gap-2">
         {filteredTasks.length === 0 && (
           <li className="rounded-2xl border border-dashed border-card-border bg-card p-6 text-center text-sm text-muted">
-            אין משימות תואמות לסינון
+            {tasks.length === 0
+              ? "אין עדיין משימות. הוסיפי משימה ראשונה."
+              : "אין משימות תואמות לסינון"}
           </li>
         )}
         {filteredTasks.map((task) => (

@@ -5,6 +5,7 @@ export type TaskStatus =
   | "בוצעה"
   | "ממתינה לאישור"
   | "אושרה"
+  | "נדחתה"
   | "בוטלה";
 export type Recurrence =
   | "לא חוזרת"
@@ -46,6 +47,11 @@ export type Task = {
   isRecurring: boolean;
   recurrence: Recurrence;
   notes: string;
+  // Whether marking this task done routes it to "ממתינה לאישור" (true) or
+  // straight to "אושרה" (false). Persisted as tasks.requires_approval in
+  // Supabase; for demo/local tasks it's computed the same way it always was
+  // (assignee is one of CHILDREN).
+  requiresApproval: boolean;
   rideRider?: string;
   rideDriverThere?: string;
   rideDriverBack?: string;

@@ -33,6 +33,7 @@ export const TASK_STATUSES: TaskStatus[] = [
   "בוצעה",
   "ממתינה לאישור",
   "אושרה",
+  "נדחתה",
   "בוטלה",
 ];
 export const RECURRENCES: Recurrence[] = [
@@ -120,7 +121,7 @@ function toISODate(date: Date) {
 
 export function buildInitialTasks(today: Date): Task[] {
   const d = (offset: number) => toISODate(addDays(today, offset));
-  return [
+  const tasks: Omit<Task, "requiresApproval">[] = [
     {
       id: "t1",
       title: "ניקוי שיניים",
@@ -296,6 +297,10 @@ export function buildInitialTasks(today: Date): Task[] {
       notes: "",
     },
   ];
+  return tasks.map((task) => ({
+    ...task,
+    requiresApproval: CHILDREN.includes(task.assignedTo),
+  }));
 }
 
 export function emptyFormValues(dateStr: string): TaskFormValues {

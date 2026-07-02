@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type SubmitEvent } from "react";
+import { useEffect, useMemo, useState, type SubmitEvent } from "react";
 import {
   ADD_KIND_PRESETS,
   buildInitialTasks,
@@ -23,6 +23,15 @@ import { RewardsView } from "@/components/family-app/RewardsView";
 import { TasksView } from "@/components/family-app/TasksView";
 import { TodayView } from "@/components/family-app/TodayView";
 import { avatarColor, toISODate } from "@/components/family-app/utils";
+import { useFamilySession } from "@/hooks/useFamilySession";
+import { isSupabaseConfigured } from "@/lib/supabaseClient";
+import {
+  fetchFamilyTasks,
+  insertFamilyTask,
+  updateFamilyTask,
+  updateTaskStatus,
+} from "@/lib/family-app/tasksApi";
+import { ensureEarnedRewardTransaction } from "@/lib/family-app/rewardsApi";
 
 export default function Home() {
   const [today] = useState(() => {
@@ -30,7 +39,113 @@ export default function Home() {
     date.setHours(0, 0, 0, 0);
     return date;
   });
-  const [tasks, setTasks] = useState<Task[]>(() => buildInitialTasks(today));
+
+  const familySession = useFamilySession();
+
+  // No Supabase configured, or auth resolved and there's no session: fall
+  // back to local demo data. Otherwise (session present, or auth still
+  // resolving) we never show demo tasks to what might be a logged-in user.
+  const demoMode =
+    !isSupabaseConfigured ||
+    (familySession.authChecked && !familySession.session);
+
+  const membersById = useMemo(
+    () =>
+      new Map((familySession.members ?? []).map((m) => [m.id, m.displayName])),
+    [familySession.members]
+  );
+  const membersByName = useMemo(
+    () =>
+      new Map((familySession.members ?? []).map((m) => [m.displayName, m.id])),
+    [familySession.members]
+  );
+
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [tasksLoading, setTasksLoading] = useState(true);
+  const [tasksError, setTasksError] = useState<string | null>(null);
+
+  // Load either demo tasks or the family's real tasks, depending on mode.
+  // Written as one async function invoked from the effect (rather than
+  // setState calls directly in the effect body) to keep every state update
+  // inside a callback, not the effect's synchronous execution.
+  useEffect(() => {
+    let cancelled = false;
+
+    async function syncTasks() {
+      if (demoMode) {
+        if (!cancelled) {
+          setTasks(buildInitialTasks(today));
+          setTasksLoading(false);
+          setTasksError(null);
+        }
+        return;
+      }
+
+      if (!familySession.currentMember || !familySession.family) {
+        if (!cancelled) setTasksLoading(true);
+        return;
+      }
+
+      if (!cancelled) {
+        setTasksLoading(true);
+        setTasksError(null);
+      }
+      try {
+        const loaded = await fetchFamilyTasks(
+          familySession.family.id,
+          membersById
+        );
+        if (!cancelled) {
+          setTasks(loaded);
+          setTasksLoading(false);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setTasksError(err instanceof Error ? err.message : String(err));
+          setTasksLoading(false);
+        }
+      }
+    }
+
+    syncTasks();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    demoMode,
+    familySession.currentMember,
+    familySession.family,
+    membersById,
+    today,
+  ]);
+
+  async function refreshTasks() {
+    if (!familySession.family) return;
+    try {
+      const loaded = await fetchFamilyTasks(familySession.family.id, membersById);
+      setTasks(loaded);
+    } catch (err) {
+      setTasksError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  function computeRequiresApproval(assignedTo: string): boolean {
+    if (!demoMode) {
+      const member = familySession.members?.find(
+        (m) => m.displayName === assignedTo
+      );
+      if (member) return member.role === "child";
+    }
+    return CHILDREN.includes(assignedTo);
+  }
+
+  // TODO: points shown below and the two reset actions are still computed
+  // purely from the in-memory `tasks` list (see rawPoints/cumulativePoints),
+  // not from summing reward_transactions, and the resets are never
+  // persisted as reward_transactions rows. Approving a task with points > 0
+  // does record an `earned` transaction (see handleApprove), but that
+  // ledger isn't the source of truth for balances yet — see supabase/README.md.
   const [weeklyBaseline, setWeeklyBaseline] = useState<Record<string, number>>(
     {}
   );
@@ -107,7 +222,7 @@ export default function Home() {
     setActiveTab("משימות");
   }
 
-  function handleFormSubmit(e: SubmitEvent<HTMLFormElement>) {
+  async function handleFormSubmit(e: SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!formValues.title.trim()) return;
 
@@ -116,6 +231,33 @@ export default function Home() {
       : "לא חוזרת";
     const points = Number(formValues.points) || 0;
     const isRide = formValues.type === "הסעה";
+    const submittedValues: TaskFormValues = { ...formValues, recurrence };
+
+    if (!demoMode && familySession.currentMember && familySession.family) {
+      setTasksError(null);
+      try {
+        if (editingTaskId) {
+          await updateFamilyTask(editingTaskId, submittedValues, membersByName);
+        } else {
+          const requiresApproval = computeRequiresApproval(
+            formValues.assignedTo
+          );
+          await insertFamilyTask(
+            submittedValues,
+            familySession.family.id,
+            familySession.currentMember.id,
+            requiresApproval,
+            membersByName
+          );
+        }
+        await refreshTasks();
+      } catch (err) {
+        setTasksError(err instanceof Error ? err.message : String(err));
+      }
+      setEditingTaskId(null);
+      setActiveTab("משימות");
+      return;
+    }
 
     if (editingTaskId) {
       setTasks((prev) =>
@@ -165,6 +307,7 @@ export default function Home() {
         isRecurring: formValues.isRecurring,
         recurrence,
         notes: formValues.notes.trim(),
+        requiresApproval: computeRequiresApproval(formValues.assignedTo),
         rideRider: isRide ? formValues.rideRider.trim() : undefined,
         rideDriverThere: isRide
           ? formValues.rideDriverThere.trim()
@@ -183,21 +326,64 @@ export default function Home() {
     setActiveTab("משימות");
   }
 
-  function handleMarkDone(id: string) {
+  async function handleMarkDone(id: string) {
+    const task = tasks.find((t) => t.id === id);
+    if (!task || task.status !== "פתוחה") return;
+
+    if (!demoMode) {
+      setTasksError(null);
+      try {
+        await updateTaskStatus(id, {
+          status: task.requiresApproval ? "pending_approval" : "approved",
+        });
+        await refreshTasks();
+      } catch (err) {
+        setTasksError(err instanceof Error ? err.message : String(err));
+      }
+      return;
+    }
+
     setTasks((prev) =>
-      prev.map((task) => {
-        if (task.id !== id || task.status !== "פתוחה") return task;
+      prev.map((t) => {
+        if (t.id !== id || t.status !== "פתוחה") return t;
         return {
-          ...task,
-          status: CHILDREN.includes(task.assignedTo)
-            ? "ממתינה לאישור"
-            : "אושרה",
+          ...t,
+          status: t.requiresApproval ? "ממתינה לאישור" : "אושרה",
         };
       })
     );
   }
 
-  function handleApprove(id: string) {
+  async function handleApprove(id: string) {
+    if (!demoMode && familySession.currentMember && familySession.family) {
+      const task = tasks.find((t) => t.id === id);
+      setTasksError(null);
+      try {
+        await updateTaskStatus(id, {
+          status: "approved",
+          approved_by_member_id: familySession.currentMember.id,
+          approved_at: new Date().toISOString(),
+        });
+        if (task && task.points > 0) {
+          const memberId = membersByName.get(task.assignedTo);
+          if (memberId) {
+            await ensureEarnedRewardTransaction({
+              familyId: familySession.family.id,
+              memberId,
+              taskId: id,
+              points: task.points,
+              reason: task.title,
+              createdByMemberId: familySession.currentMember.id,
+            });
+          }
+        }
+        await refreshTasks();
+      } catch (err) {
+        setTasksError(err instanceof Error ? err.message : String(err));
+      }
+      return;
+    }
+
     setTasks((prev) =>
       prev.map((task) =>
         task.id === id ? { ...task, status: "אושרה" } : task
@@ -205,15 +391,37 @@ export default function Home() {
     );
   }
 
-  function handleReject(id: string) {
+  async function handleReject(id: string) {
+    if (!demoMode) {
+      setTasksError(null);
+      try {
+        await updateTaskStatus(id, { status: "rejected" });
+        await refreshTasks();
+      } catch (err) {
+        setTasksError(err instanceof Error ? err.message : String(err));
+      }
+      return;
+    }
+
     setTasks((prev) =>
       prev.map((task) =>
-        task.id === id ? { ...task, status: "בוטלה" } : task
+        task.id === id ? { ...task, status: "נדחתה" } : task
       )
     );
   }
 
-  function handleRevertToOpen(id: string) {
+  async function handleRevertToOpen(id: string) {
+    if (!demoMode) {
+      setTasksError(null);
+      try {
+        await updateTaskStatus(id, { status: "open" });
+        await refreshTasks();
+      } catch (err) {
+        setTasksError(err instanceof Error ? err.message : String(err));
+      }
+      return;
+    }
+
     setTasks((prev) =>
       prev.map((task) =>
         task.id === id ? { ...task, status: "פתוחה" } : task
@@ -261,6 +469,17 @@ export default function Home() {
         </header>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+          {!demoMode && tasksLoading && (
+            <p className="mb-3 rounded-2xl border border-dashed border-card-border bg-card p-3 text-center text-xs text-muted">
+              טוענת משימות מ-Supabase...
+            </p>
+          )}
+          {!demoMode && tasksError && (
+            <p className="mb-3 rounded-2xl border border-dashed border-rose-300 bg-card p-3 text-center text-xs text-rose-600">
+              שגיאה מול Supabase: {tasksError}
+            </p>
+          )}
+
           {activeTab === "היום" && (
             <TodayView
               today={today}
@@ -300,7 +519,17 @@ export default function Home() {
             />
           )}
 
-          {activeTab === "משפחה" && <FamilyView />}
+          {activeTab === "משפחה" && (
+            <FamilyView
+              session={familySession.session}
+              authChecked={familySession.authChecked}
+              currentMember={familySession.currentMember}
+              family={familySession.family}
+              members={familySession.members}
+              loading={familySession.loading}
+              error={familySession.error}
+            />
+          )}
 
           {activeTab === "הוספה" && (
             <AddView

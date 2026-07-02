@@ -6,6 +6,7 @@ export const STATUS_STYLES: Record<TaskStatus, string> = {
   בוצעה: "bg-sky-100 text-sky-700",
   "ממתינה לאישור": "bg-amber-100 text-amber-800",
   אושרה: "bg-accent2-soft text-accent2",
+  נדחתה: "bg-rose-100 text-rose-600",
   בוטלה: "bg-rose-100 text-rose-600",
 };
 

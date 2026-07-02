@@ -1,4 +1,13 @@
+import { useState, type SubmitEvent } from "react";
+import type { Session } from "@supabase/supabase-js";
+import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 import { familyMembers } from "@/data/familyDemoData";
+import type {
+  CurrentFamilyMember,
+  FamilyMemberRecord,
+  SupaFamily,
+} from "@/hooks/useFamilySession";
+import type { FamilyMember } from "@/types/familyApp";
 import { avatarColor, getPermissions, roleLabel } from "./utils";
 
 const CALENDAR_NOTES = [
@@ -33,17 +42,140 @@ function PermissionRow({ label, granted }: { label: string; granted: boolean }) 
   );
 }
 
-export function FamilyView() {
+export function FamilyView({
+  session,
+  authChecked,
+  currentMember,
+  family,
+  members,
+  loading,
+  error,
+}: {
+  session: Session | null;
+  authChecked: boolean;
+  currentMember: CurrentFamilyMember | null;
+  family: SupaFamily | null;
+  members: FamilyMemberRecord[] | null;
+  loading: boolean;
+  error: string | null;
+}) {
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [loginSubmitting, setLoginSubmitting] = useState(false);
+
+  async function handleLogin(e: SubmitEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!supabase) return;
+    setLoginError(null);
+    setLoginSubmitting(true);
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: loginEmail,
+      password: loginPassword,
+    });
+    setLoginSubmitting(false);
+    if (signInError) {
+      setLoginError(signInError.message);
+      return;
+    }
+    setLoginPassword("");
+  }
+
+  async function handleLogout() {
+    if (!supabase) return;
+    await supabase.auth.signOut();
+  }
+
+  const showingLiveData = !!(session && family && members);
+  const displayMembers: FamilyMember[] = showingLiveData
+    ? members!.map((m) => ({ name: m.displayName, role: m.role }))
+    : familyMembers;
+
   return (
     <div className="flex flex-col gap-4">
       <h1 className="text-2xl font-bold tracking-tight">משפחה</h1>
+
+      {!isSupabaseConfigured && (
+        <p className="rounded-2xl border border-dashed border-card-border bg-card p-3 text-xs text-muted">
+          Supabase לא מוגדר במכשיר הזה (חסרים משתני סביבה). מציגים נתוני דמו
+          בלבד. ראו <code>.env.local.example</code>.
+        </p>
+      )}
+
+      {isSupabaseConfigured && authChecked && !session && (
+        <form
+          onSubmit={handleLogin}
+          className="flex flex-col gap-2 rounded-2xl border border-card-border bg-card p-4 shadow-sm"
+        >
+          <h2 className="text-sm font-semibold">התחברות</h2>
+          <input
+            type="email"
+            required
+            placeholder="אימייל"
+            value={loginEmail}
+            onChange={(e) => setLoginEmail(e.target.value)}
+            className="rounded-xl border border-card-border bg-background px-3 py-2 text-sm"
+          />
+          <input
+            type="password"
+            required
+            placeholder="סיסמה"
+            value={loginPassword}
+            onChange={(e) => setLoginPassword(e.target.value)}
+            className="rounded-xl border border-card-border bg-background px-3 py-2 text-sm"
+          />
+          {loginError && <p className="text-xs text-red-600">{loginError}</p>}
+          <button
+            type="submit"
+            disabled={loginSubmitting}
+            className="rounded-2xl bg-accent2 px-4 py-2.5 text-xs font-medium text-white disabled:opacity-60"
+          >
+            {loginSubmitting ? "מתחברת..." : "התחברות"}
+          </button>
+          <p className="text-[11px] text-muted">
+            מציגים נתוני דמו למטה עד ההתחברות.
+          </p>
+        </form>
+      )}
+
+      {session && (
+        <div className="flex items-center justify-between gap-2 rounded-2xl border border-card-border bg-card p-4 shadow-sm">
+          <div className="flex flex-col leading-tight">
+            <span className="text-sm font-medium">
+              {currentMember
+                ? `מחוברת כ-${currentMember.displayName}`
+                : session.user.email}
+            </span>
+            {family && <span className="text-[10px] text-muted">{family.name}</span>}
+          </div>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="rounded-2xl border border-card-border bg-background px-3 py-1.5 text-xs font-medium"
+          >
+            יציאה
+          </button>
+        </div>
+      )}
+
+      {loading && (
+        <p className="text-xs text-muted">טוענת נתוני משפחה מ-Supabase...</p>
+      )}
+
+      {error && (
+        <p className="rounded-2xl border border-dashed border-card-border bg-card p-3 text-xs text-red-600">
+          {error} מציגים נתוני דמו במקום.
+        </p>
+      )}
+
       <p className="text-xs text-muted">
-        תפקידים והרשאות בדמו — currentUser = דיקלה (admin). בעתיד יתווספו
-        התחברות אמיתית וניהול הרשאות מלא.
+        {showingLiveData
+          ? "תפקידים והרשאות — נתונים חיים מ-Supabase."
+          : "תפקידים והרשאות בדמו — currentUser = דיקלה (admin)."}
       </p>
 
       <ul className="flex flex-col gap-3">
-        {familyMembers.map((member) => {
+        {displayMembers.map((member) => {
           const permissions = getPermissions(member.role);
           return (
             <li

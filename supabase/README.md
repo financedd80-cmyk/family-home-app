@@ -7,9 +7,19 @@ client in the codebase, no `.env.local`, and no Auth wiring. This is schema
 planning, meant to be reviewed before anything is run against a real
 Supabase project.
 
-Status: the tables from `001_initial_family_app_schema.sql` have already
-been created in the Supabase project. `002_seed_initial_family.sql` (see
-"Bootstrap" below) has been prepared but **not yet run**.
+Status:
+- `001_initial_family_app_schema.sql` — tables created.
+- `002_seed_initial_family.sql` — run; the first family and its members
+  exist, with דיקלה linked to her Supabase Auth account as admin.
+- `003_fix_rls_recursion_and_write_policies.sql` — the infinite-recursion
+  RLS bug (see below) was already hand-patched directly in Supabase to
+  unblock development. This file formalizes that fix plus new write
+  policies, but has **not been run from this file** — review it against
+  the live hand-patch before running it (see "Before running any migration"
+  below).
+- The app (`src/`) is connected to Supabase: real login, and tasks/
+  transportation are read from and written to the database. See "What's
+  connected now" below for exactly what that covers.
 
 ## What's in `migrations/001_initial_family_app_schema.sql`
 
@@ -86,69 +96,79 @@ soft delete and append-only history rather than physical deletion:
 
 ### Row Level Security
 
-RLS is **enabled on every table**. The migration includes conservative
-`select`-only policies scoped to "the caller is an active member of this
-family" (matched via `family_members.auth_user_id = auth.uid()`). There are
-intentionally **no insert/update/delete policies yet** — until Supabase Auth
-is connected and tested, writes are expected to go through the service role
-(trusted server-side code), which bypasses RLS.
+RLS is **enabled on every table**. As originally written in this file, the
+`select` policies scoped access via a `family_members` subquery — which
+turned out to be broken: `family_members`' own policy queried
+`family_members` again to evaluate itself, causing infinite recursion. That
+was patched by hand in Supabase; `003_fix_rls_recursion_and_write_policies.sql`
+is that fix written down properly (see below), plus the write policies the
+app now needs.
 
-This is a starting point, not a final authorization model. See the `TODO`
-comment block right above the `alter table ... enable row level security`
-statements in the SQL file for what's still open (admin-only actions,
-whether unauthenticated children need a different access model, etc).
+This is still not a final authorization model — see the `TODO` at the
+bottom of `003_fix_rls_recursion_and_write_policies.sql` for what's
+deliberately deferred (e.g. non-admin members writing their own data).
 
 ## Order to run
 
 1. `migrations/001_initial_family_app_schema.sql` — **already run.**
-2. `migrations/002_seed_initial_family.sql` — prepared, **not yet run**
-   (needs a manual edit first — see "Bootstrap" below).
+2. `migrations/002_seed_initial_family.sql` — **already run.**
+3. `migrations/003_fix_rls_recursion_and_write_policies.sql` — **not run
+   from this file yet** (the fix it contains was already applied by hand;
+   review before running — see below).
 
 Future schema changes should be added as new numbered files
-(`003_...sql`, ...) rather than editing either of these once they've
-actually been run somewhere.
+(`004_...sql`, ...) rather than editing any of these once they've actually
+been run somewhere.
+
+## Migration 003: RLS recursion fix + write policies
+
+`003_fix_rls_recursion_and_write_policies.sql` does two things:
+
+1. **Fixes the recursion.** Adds four `security definer` helper functions —
+   `current_user_family_id()`, `current_user_family_member_id()`,
+   `current_user_role()`, `current_user_is_admin()` — that read the
+   caller's own `family_members` row while bypassing RLS internally (that's
+   what breaks the cycle). Every `select` policy on every table is rewritten
+   to call `current_user_family_id()` instead of running a `family_members`
+   subquery directly.
+2. **Adds write policies**, since the app now saves real data instead of
+   demo data. For this stage they're deliberately narrow: every insert/update
+   requires `current_user_is_admin()` (today only דיקלה has a login, so
+   that's the only role that needs write access) and is scoped to the
+   caller's own family. Tables that got insert/update policies: `tasks`,
+   `transportation_details`, `reward_rules`, and update-only for
+   `family_members`; `reward_transactions` got insert-only (it's an
+   append-only ledger, so there's nothing to update). No table has a
+   `delete` policy — RLS denies delete by default with none defined, which
+   is intentional; the app never issues a real `DELETE` (see "Data
+   Retention Policy" above).
+
+Since the recursion fix was already applied by hand directly in Supabase,
+**diff this file against the live policies before running it**, so it
+formalizes what's actually there instead of silently overwriting a
+different hand-patch.
 
 ## Bootstrap: seeding the first family (`002_seed_initial_family.sql`)
 
-This is a one-off seed script (not a repeatable schema migration) that
-creates the app's first real data:
+This was a one-off seed script (not a repeatable schema migration) — it has
+already been run. It created:
 
-- One row in `families`: **משפחת גורן בן חיים**.
-- Five rows in `family_members` under that family:
-  - **דיקלה** — `admin`
-  - **דודו** — `parent`
-  - **דניאל** — `child`
-  - **דור** — `child`
-  - **דוראל** — `child`
+- One row in `families` (see the file for the exact name used — it was
+  edited after this was first written, so treat Supabase itself as the
+  source of truth for the current family name, not this README).
+- Five rows in `family_members` under that family: **דיקלה** (`admin`,
+  linked to her real Supabase Auth account), **דודו** (`parent`), **דניאל**,
+  **דור**, **דוראל** (`child`).
 
-Only דיקלה is linked to a real Supabase Auth account (`auth_user_id`) — she's
-the one who needs to log in first as the admin. The rest are `family_members`
-rows without logins for now, same as any child in this schema; they can be
-connected to real Auth accounts later the same way, in a future seed/step.
+Only דיקלה is linked to a real Supabase Auth account (`auth_user_id`) and
+can log in right now. The rest are `family_members` rows without logins for
+now, same as any child in this schema; they can be connected to real Auth
+accounts later the same way, in a future seed/step.
 
-### Before running it
-
-1. **דיקלה must already have a Supabase Auth account.** Create one first
-   (she signs up normally, or an admin creates her under
-   Authentication → Users in the Supabase Dashboard) if she doesn't have one
-   yet — the script looks her up by email, it doesn't create her account.
-2. Open `002_seed_initial_family.sql` and replace the placeholder at the top
-   of the `do $$ ... $$` block:
-   ```sql
-   v_dikla_email text := 'REPLACE_WITH_DIKLA_EMAIL@example.com';
-   ```
-   with her real login email.
-3. To double check her auth id yourself (optional — the script does this
-   lookup automatically): Supabase Dashboard → Authentication → Users →
-   find her row → the **UID** column is `auth.users.id`. Or run
-   `select id, email from auth.users where email = 'her-email@example.com';`
-   in the SQL Editor.
-4. Run the whole file once in the Supabase SQL Editor.
-
-The script is defensive: it raises an exception (no rows written) if the
-placeholder email wasn't replaced / doesn't match any `auth.users` row, and
-also if a family named **משפחת גורן בן חיים** already exists, so accidentally
-running it twice won't create duplicate data.
+Since it already ran, don't re-run this file — it has a built-in guard that
+raises an exception if a family with the same name already exists, so a
+second run should fail safely rather than duplicate data, but there's no
+reason to test that on the real project.
 
 ## Before running any migration in this folder
 
@@ -165,29 +185,55 @@ running it twice won't create duplicate data.
   `on delete set null` on `reward_transactions.task_id` / `activity_log.task_id`
   match the intended data retention behavior described above.
 
-## What's still NOT connected after this migration exists
+## What's connected now
 
-Creating these tables does not, by itself, do any of the following:
+- **Auth** — real Supabase Auth login/logout for דיקלה (`src/lib/supabaseClient.ts`,
+  `src/hooks/useFamilySession.ts`, the login form in the "משפחה" tab).
+- **Family / family members** — read from Supabase after login (families,
+  family_members).
+- **Tasks** — read, created, edited, and moved through their status flow
+  (mark done → approve/reject/revert → cancel) against the real `tasks`
+  table, once logged in. See `src/lib/family-app/tasksApi.ts` and the
+  handlers in `src/app/page.tsx`.
+- **Transportation details** — saved/updated alongside a task whenever its
+  type is "הסעה" (`transportation_details`).
+- **Internal calendar** — the "יומן" tab already renders whatever is in the
+  shared `tasks` state, so once tasks come from Supabase, the calendar does
+  too. No separate wiring needed there.
+- **Reward transactions (partial)** — approving a task with `points > 0`
+  records one `earned` row in `reward_transactions` (with a duplicate check
+  by `task_id`, so re-approving doesn't double count). The points shown in
+  the "ניקוד" tab are still computed from the in-memory task list, not from
+  summing `reward_transactions`, and weekly/all-time resets are still
+  in-memory only (not persisted as reset transactions) — see the `TODO`
+  comment near the reward/points state in `src/app/page.tsx`.
 
-- **Auth** — Supabase Auth is not set up. `family_members.auth_user_id` and
-  `families.created_by` are bare nullable `uuid` columns with no foreign key
-  to `auth.users` yet.
-- **Supabase client** — no `@supabase/supabase-js` (or similar) dependency,
-  no client instance, no environment variables.
-- **Saving tasks / any app data** — the app's screens (calendar, tasks,
-  transportation, scoring, family tab) still use their current in-memory /
-  demo data. Nothing reads from or writes to these tables yet.
-- **Calendar connection** — `calendar_connections`,
-  `calendar_import_rules`, and `calendar_import_queue` are schema-only. No
-  OAuth flow, no token storage, no sync job exists.
+## What's still NOT connected
+
+- **Delete** — never used anywhere in the app; all "removal" is soft delete
+  (`deleted_at`) or `status = 'cancelled'`, matching the Data Retention
+  Policy above. There's no UI for soft-deleting a family member or task
+  outright yet (cancelling a task is the closest equivalent today).
+- **External calendar** — Google/Apple/Samsung/Outlook sync. `calendar_connections`,
+  `calendar_import_rules`, and `calendar_import_queue` remain schema-only.
+- **Full reward ledger** — see "Reward transactions (partial)" above; the
+  ledger only grows on approval right now, it isn't yet the source of truth
+  for balances or resets.
+- **Other family members' logins** — only דיקלה can log in today; the rest
+  of `family_members` still have no `auth_user_id`.
+- **Fine-grained (non-admin) write access** — every write policy in
+  `003_fix_rls_recursion_and_write_policies.sql` requires admin; see the
+  `TODO` at the bottom of that file.
 
 ## Suggested next steps (not part of this stage)
 
-1. Create דיקלה's Supabase Auth account (if not already done) and run
-   `002_seed_initial_family.sql` after filling in her email.
-2. Add the Supabase client and environment variables.
-3. Wire up Auth and decide how the other family members (דודו, and
-   eventually the kids) get connected to their own Auth accounts.
-4. Connect one screen at a time (likely `family_members` and `tasks` first)
-   to real data, replacing demo/in-memory state incrementally.
-5. Revisit RLS policies with real `auth.uid()` values before trusting them.
+1. Review and run `003_fix_rls_recursion_and_write_policies.sql` against
+   Supabase (diffing it against whatever was hand-patched first).
+2. Decide whether to finish wiring `reward_transactions` as the real source
+   of truth for balances and resets, or keep it partial for longer.
+3. Give the other family members real Supabase Auth logins and add
+   non-admin write policies for what they should be able to do themselves
+   (e.g. marking their own task done).
+4. When ready, start on external calendar import (`calendar_connections` /
+   `calendar_import_rules` / `calendar_import_queue`) — explicitly out of
+   scope until asked for.
