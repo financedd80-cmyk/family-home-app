@@ -38,12 +38,16 @@ function addOneCalendarDay(dateStr: string): string {
   return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}`;
 }
 
-function formatICSUTCTimestamp(): string {
-  const now = new Date();
-  return `${now.getUTCFullYear()}${pad(now.getUTCMonth() + 1)}${pad(
-    now.getUTCDate()
-  )}T${pad(now.getUTCHours())}${pad(now.getUTCMinutes())}${pad(
-    now.getUTCSeconds()
+// The actual UTC instant for a given Date, as YYYYMMDDTHHMMSSZ. Unlike
+// formatICSDateTime above (deliberately "floating", no conversion), this is
+// used where a real absolute instant is required — Google Calendar's own
+// quick-add link only accepts UTC "Z" timestamps, and DTSTAMP is defined by
+// RFC 5545 as the actual creation instant, not a floating local time.
+function formatUTCDateTime(date: Date): string {
+  return `${date.getUTCFullYear()}${pad(date.getUTCMonth() + 1)}${pad(
+    date.getUTCDate()
+  )}T${pad(date.getUTCHours())}${pad(date.getUTCMinutes())}${pad(
+    date.getUTCSeconds()
   )}Z`;
 }
 
@@ -122,7 +126,7 @@ export function taskToICS(task: Task): string {
     "CALSCALE:GREGORIAN",
     "BEGIN:VEVENT",
     `UID:${task.id}@family-home-app`,
-    `DTSTAMP:${formatICSUTCTimestamp()}`,
+    `DTSTAMP:${formatUTCDateTime(new Date())}`,
     dtStartLine,
     dtEndLine,
     `SUMMARY:${escapeICSText(task.title)}`,
@@ -154,4 +158,69 @@ export function downloadTaskAsICS(task: Task): void {
   // Deferred so the browser has a chance to start the download/open before
   // the object URL is freed.
   window.setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+// Shares the task's .ics file through the OS share sheet (iOS/Android),
+// which is what actually feels like "add to my calendar" on a phone — a
+// plain download often just lands in a Files/Downloads app with no obvious
+// next step. Falls back to downloadTaskAsICS wherever Web Share (with
+// files) isn't supported, e.g. most desktop browsers.
+export async function shareTaskICS(task: Task): Promise<void> {
+  const content = taskToICS(task);
+  const file = new File([content], "family-home-event.ics", {
+    type: "text/calendar;charset=utf-8",
+  });
+
+  const nav = typeof navigator === "undefined" ? null : navigator;
+  const canShareFiles = !!nav?.canShare?.({ files: [file] });
+
+  if (canShareFiles && nav?.share) {
+    try {
+      await nav.share({
+        title: task.title,
+        text: `אירוע מהבית שלנו: ${task.title}`,
+        files: [file],
+      });
+      return;
+    } catch (err) {
+      // AbortError means the user closed the share sheet themselves —
+      // respect that instead of immediately forcing a download afterward.
+      if (err instanceof Error && err.name === "AbortError") return;
+    }
+  }
+
+  downloadTaskAsICS(task);
+}
+
+// A Google Calendar "quick add" link (calendar.google.com/calendar/render)
+// — opens Google Calendar (app or web) pre-filled with the event, without
+// any OAuth/API connection. Times are converted to real UTC instants (Z),
+// since that's the only absolute format the render endpoint accepts.
+export function buildGoogleCalendarUrl(task: Task): string {
+  const params = new URLSearchParams();
+  params.set("action", "TEMPLATE");
+  params.set("text", task.title);
+
+  if (task.time) {
+    const start = buildLocalDate(task.date, task.time);
+    let end = task.endTime
+      ? buildLocalDate(task.date, task.endTime)
+      : new Date(start.getTime() + 60 * 60 * 1000);
+    if (end.getTime() <= start.getTime()) {
+      end = new Date(start.getTime() + 60 * 60 * 1000);
+    }
+    params.set("dates", `${formatUTCDateTime(start)}/${formatUTCDateTime(end)}`);
+  } else {
+    params.set(
+      "dates",
+      `${formatICSDateOnly(task.date)}/${addOneCalendarDay(task.date)}`
+    );
+  }
+
+  params.set("details", buildDescription(task));
+  if (task.location) {
+    params.set("location", task.location);
+  }
+
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }

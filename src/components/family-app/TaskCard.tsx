@@ -1,6 +1,10 @@
 import { useState } from "react";
 import type { Task } from "@/types/familyApp";
-import { downloadTaskAsICS } from "@/lib/family-app/calendarExport";
+import {
+  buildGoogleCalendarUrl,
+  downloadTaskAsICS,
+  shareTaskICS,
+} from "@/lib/family-app/calendarExport";
 import { STATUS_STYLES, formatTimeLabel, rideSummary } from "./utils";
 
 export function TaskCard({
@@ -17,15 +21,31 @@ export function TaskCard({
   onEdit: () => void;
 }) {
   const ride = rideSummary(task);
-  // Local-only export feedback — every viewer (admin/parent/child) can add
-  // any item they can see to their phone's own calendar; this is a one-way
-  // .ics download, not a write to Supabase.
-  const [showIcsNotice, setShowIcsNotice] = useState(false);
+  // Local-only export/share — every viewer (admin/parent/child) can add any
+  // item they can see to their own phone's calendar; none of this writes to
+  // Supabase. One small toggle button keeps the card from getting crowded
+  // with three separate buttons at all times.
+  const [showCalendarOptions, setShowCalendarOptions] = useState(false);
+  const [showCalendarNotice, setShowCalendarNotice] = useState(false);
 
-  function handleAddToPhoneCalendar() {
+  function notifyCalendarActionDone() {
+    setShowCalendarNotice(true);
+    window.setTimeout(() => setShowCalendarNotice(false), 4000);
+  }
+
+  async function handleShareToPhone() {
+    await shareTaskICS(task);
+    notifyCalendarActionDone();
+  }
+
+  function handleAddToGoogleCalendar() {
+    window.open(buildGoogleCalendarUrl(task), "_blank");
+    notifyCalendarActionDone();
+  }
+
+  function handleDownloadIcsFile() {
     downloadTaskAsICS(task);
-    setShowIcsNotice(true);
-    window.setTimeout(() => setShowIcsNotice(false), 4000);
+    notifyCalendarActionDone();
   }
 
   return (
@@ -81,15 +101,40 @@ export function TaskCard({
         )}
         <button
           type="button"
-          onClick={handleAddToPhoneCalendar}
+          onClick={() => setShowCalendarOptions((prev) => !prev)}
           className="rounded-full border border-card-border px-3 py-1.5 text-xs font-medium text-muted"
         >
-          הוסף ליומן בטלפון
+          הוסף ליומן
         </button>
       </div>
-      {showIcsNotice && (
+      {showCalendarOptions && (
+        <div className="flex flex-wrap items-center gap-2 border-t border-card-border pt-2">
+          <button
+            type="button"
+            onClick={handleShareToPhone}
+            className="rounded-full border border-card-border px-2.5 py-1 text-[11px] font-medium text-muted"
+          >
+            שתף ליומן בטלפון
+          </button>
+          <button
+            type="button"
+            onClick={handleAddToGoogleCalendar}
+            className="rounded-full border border-card-border px-2.5 py-1 text-[11px] font-medium text-muted"
+          >
+            הוסף ל-Google Calendar
+          </button>
+          <button
+            type="button"
+            onClick={handleDownloadIcsFile}
+            className="rounded-full border border-card-border px-2.5 py-1 text-[11px] font-medium text-muted"
+          >
+            הורד קובץ יומן
+          </button>
+        </div>
+      )}
+      {showCalendarNotice && (
         <p className="text-[11px] text-accent2">
-          קובץ היומן נוצר. פתחו אותו כדי להוסיף ליומן הטלפון.
+          פתחו את הקובץ/השיתוף ובחרו את אפליקציית היומן כדי להוסיף את האירוע.
         </p>
       )}
     </li>
