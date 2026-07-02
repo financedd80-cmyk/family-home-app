@@ -20,6 +20,35 @@ export function avatarColor(name: string) {
   return avatarColors[code % avatarColors.length];
 }
 
+// A wider, more distinct palette than avatarColor's 2 shades — used to tag
+// "whose event is this" across the app (task cards, calendar day-strip/grid
+// dots, member filter chips), so the family calendar reads at a glance the
+// way a color-coded calendar app does. `tag` and `dot` are paired per member
+// so a person's dot color always matches their badge color.
+const memberPalette = [
+  { tag: "bg-accent-soft text-accent", dot: "bg-accent" },
+  { tag: "bg-accent2-soft text-accent2", dot: "bg-accent2" },
+  { tag: "bg-sky-100 text-sky-700", dot: "bg-sky-500" },
+  { tag: "bg-emerald-100 text-emerald-700", dot: "bg-emerald-500" },
+  { tag: "bg-amber-100 text-amber-800", dot: "bg-amber-500" },
+  { tag: "bg-fuchsia-100 text-fuchsia-700", dot: "bg-fuchsia-500" },
+];
+
+function memberPaletteEntry(name: string) {
+  const code = name
+    .split("")
+    .reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  return memberPalette[code % memberPalette.length];
+}
+
+export function memberTagColor(name: string) {
+  return memberPaletteEntry(name).tag;
+}
+
+export function memberDotColor(name: string) {
+  return memberPaletteEntry(name).dot;
+}
+
 export function roleLabel(role: Role) {
   if (role === "child") return "ילד";
   if (role === "admin") return "הורה · מנהלת";
@@ -87,25 +116,29 @@ export function endOfWeek(date: Date) {
   return end;
 }
 
+// `referenceDate` is whichever date the calendar is currently browsing (the
+// user's selected date), NOT necessarily the real today — otherwise
+// navigating to a different month/week/day would keep filtering against the
+// real current date and nothing would ever change on screen.
 export function isInTimeframe(
   dateStr: string,
   timeframe: (typeof TIMEFRAMES)[number],
-  today: Date
+  referenceDate: Date
 ) {
   const date = new Date(`${dateStr}T00:00:00`);
   if (timeframe === "היום") {
-    return toISODate(date) === toISODate(today);
+    return toISODate(date) === toISODate(referenceDate);
   }
   if (timeframe === "השבוע") {
-    return date >= startOfWeek(today) && date <= endOfWeek(today);
+    return date >= startOfWeek(referenceDate) && date <= endOfWeek(referenceDate);
   }
   if (timeframe === "החודש") {
     return (
-      date.getFullYear() === today.getFullYear() &&
-      date.getMonth() === today.getMonth()
+      date.getFullYear() === referenceDate.getFullYear() &&
+      date.getMonth() === referenceDate.getMonth()
     );
   }
-  return date.getFullYear() === today.getFullYear();
+  return date.getFullYear() === referenceDate.getFullYear();
 }
 
 export function sortByDateTime(a: Task, b: Task) {

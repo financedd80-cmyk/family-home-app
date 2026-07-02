@@ -5,7 +5,12 @@ import {
   downloadTaskAsICS,
   shareTaskICS,
 } from "@/lib/family-app/calendarExport";
-import { STATUS_STYLES, formatTimeLabel, rideSummary } from "./utils";
+import {
+  STATUS_STYLES,
+  formatTimeLabel,
+  memberTagColor,
+  rideSummary,
+} from "./utils";
 
 export function TaskCard({
   task,
@@ -13,12 +18,16 @@ export function TaskCard({
   canMarkDone,
   onMarkDone,
   onEdit,
+  hideInlineTime,
 }: {
   task: Task;
   canEdit: boolean;
   canMarkDone: boolean;
   onMarkDone: () => void;
   onEdit: () => void;
+  // Set by CalendarAgendaList, which already shows the time as its own
+  // prominent side column — avoids showing the same time twice on one row.
+  hideInlineTime?: boolean;
 }) {
   const ride = rideSummary(task);
   // Local-only export/share — every viewer (admin/parent/child) can add any
@@ -59,8 +68,14 @@ export function TaskCard({
         </span>
       </div>
       <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
-        <span>{task.assignedTo}</span>
-        <span>{formatTimeLabel(task)}</span>
+        <span
+          className={`rounded-full px-2 py-0.5 font-medium ${memberTagColor(
+            task.assignedTo
+          )}`}
+        >
+          {task.assignedTo}
+        </span>
+        {!hideInlineTime && <span>{formatTimeLabel(task)}</span>}
         <span className="rounded-full border border-card-border bg-background px-2 py-0.5">
           {task.type}
         </span>
@@ -102,9 +117,9 @@ export function TaskCard({
         <button
           type="button"
           onClick={() => setShowCalendarOptions((prev) => !prev)}
-          className="rounded-full border border-accent px-3 py-1.5 text-xs font-semibold text-accent"
+          className="rounded-full border border-card-border px-3 py-1.5 text-xs font-medium text-muted"
         >
-          הוסף ליומן
+          ייצוא ליומן חיצוני
         </button>
       </div>
       {showCalendarOptions && (

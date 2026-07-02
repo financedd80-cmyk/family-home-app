@@ -114,6 +114,25 @@ export const HEBREW_DAY_NAMES = [
   "שבת",
 ];
 
+// Single-letter day headers for the calendar's day strip / month grid —
+// same Sunday-first order as HEBREW_DAY_NAMES (index matches Date#getDay()).
+export const HEBREW_DAY_LETTERS = ["א", "ב", "ג", "ד", "ה", "ו", "ש"];
+
+export const HEBREW_MONTH_NAMES = [
+  "ינואר",
+  "פברואר",
+  "מרץ",
+  "אפריל",
+  "מאי",
+  "יוני",
+  "יולי",
+  "אוגוסט",
+  "ספטמבר",
+  "אוקטובר",
+  "נובמבר",
+  "דצמבר",
+];
+
 function addDays(date: Date, days: number) {
   const result = new Date(date);
   result.setDate(result.getDate() + days);

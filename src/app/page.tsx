@@ -219,12 +219,12 @@ export default function Home() {
   }
 
   // Shared by both add-entry points below. Not called directly from any
-  // onClick, since it takes an argument — a `<button onClick={...}>` would
+  // onClick, since it takes arguments — a `<button onClick={...}>` would
   // otherwise pass its MouseEvent through as `kind`.
-  function startAddForm(kind: AddKind) {
+  function startAddForm(kind: AddKind, date: Date = today) {
     setEditingTaskId(null);
     setAddKind(kind);
-    const base = emptyFormValues(toISODate(today));
+    const base = emptyFormValues(toISODate(date));
     // A child may only ever add an item for themselves (see
     // supabase/migrations/006_calendar_creator_and_child_insert_policies.sql).
     const assignedTo = isChild ? currentDisplayName : base.assignedTo;
@@ -241,11 +241,12 @@ export default function Home() {
     startAddForm("משימה");
   }
 
-  // Entry point from the "יומן" tab's "+ הוספת אירוע" button — available to
-  // every role, including a child (unlike the bottom-nav "הוספה" tab and
-  // TodayView's quick-add, both of which stay admin/parent-only).
-  function openAddFormForCalendarEvent() {
-    startAddForm("אירוע");
+  // Entry point from the "יומן" tab's "+" button — available to every role,
+  // including a child (unlike the bottom-nav "הוספה" tab and TodayView's
+  // quick-add, both of which stay admin/parent-only). Defaults the new
+  // item's date to whichever day is currently selected in the calendar.
+  function openAddFormForCalendarEvent(date: Date) {
+    startAddForm("אירוע", date);
   }
 
   function openEditForm(task: Task) {
