@@ -1,4 +1,6 @@
+import { useState } from "react";
 import type { Task } from "@/types/familyApp";
+import { downloadTaskAsICS } from "@/lib/family-app/calendarExport";
 import { STATUS_STYLES, formatTimeLabel, rideSummary } from "./utils";
 
 export function TaskCard({
@@ -15,6 +17,16 @@ export function TaskCard({
   onEdit: () => void;
 }) {
   const ride = rideSummary(task);
+  // Local-only export feedback — every viewer (admin/parent/child) can add
+  // any item they can see to their phone's own calendar; this is a one-way
+  // .ics download, not a write to Supabase.
+  const [showIcsNotice, setShowIcsNotice] = useState(false);
+
+  function handleAddToPhoneCalendar() {
+    downloadTaskAsICS(task);
+    setShowIcsNotice(true);
+    window.setTimeout(() => setShowIcsNotice(false), 4000);
+  }
 
   return (
     <li className="flex flex-col gap-2.5 rounded-2xl border border-card-border bg-card p-3.5 shadow-sm">
@@ -67,7 +79,19 @@ export function TaskCard({
             עריכה
           </button>
         )}
+        <button
+          type="button"
+          onClick={handleAddToPhoneCalendar}
+          className="rounded-full border border-card-border px-3 py-1.5 text-xs font-medium text-muted"
+        >
+          הוסף ליומן בטלפון
+        </button>
       </div>
+      {showIcsNotice && (
+        <p className="text-[11px] text-accent2">
+          קובץ היומן נוצר. פתחו אותו כדי להוסיף ליומן הטלפון.
+        </p>
+      )}
     </li>
   );
 }
