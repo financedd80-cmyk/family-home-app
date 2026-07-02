@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState, type SubmitEvent } from "react";
 import {
   ADD_KIND_PRESETS,
   buildInitialTasks,
-  CHILDREN,
   currentUser,
   emptyFormValues,
   familyMembers,
@@ -13,6 +12,7 @@ import {
 import type {
   ActiveTab,
   AddKind,
+  FamilyMember,
   Task,
   TaskFormValues,
 } from "@/types/familyApp";
@@ -97,6 +97,19 @@ export default function Home() {
     return tab;
   }
 
+  // The real (or demo) member list, with roles — used by the add/edit form
+  // to know who's a child (locks "requires approval" on) and, for a child
+  // viewer, to restrict the assignee field to just themselves.
+  const formMembers: FamilyMember[] = useMemo(() => {
+    if (!demoMode && familySession.members) {
+      return familySession.members.map((m) => ({
+        name: m.displayName,
+        role: m.role,
+      }));
+    }
+    return familyMembers;
+  }, [demoMode, familySession.members]);
+
   const [tasks, setTasks] = useState<Task[]>([]);
   const [tasksLoading, setTasksLoading] = useState(true);
   const [tasksError, setTasksError] = useState<string | null>(null);
@@ -168,13 +181,7 @@ export default function Home() {
   }
 
   function computeRequiresApproval(assignedTo: string): boolean {
-    if (!demoMode) {
-      const member = familySession.members?.find(
-        (m) => m.displayName === assignedTo
-      );
-      if (member) return member.role === "child";
-    }
-    return CHILDREN.includes(assignedTo);
+    return formMembers.find((m) => m.name === assignedTo)?.role === "child";
   }
 
   // TODO: points shown below and the two reset actions are still computed
@@ -211,11 +218,34 @@ export default function Home() {
     return cumulativePoints(name) - (weeklyBaseline[name] ?? 0);
   }
 
-  function openAddForm() {
+  // Shared by both add-entry points below. Not called directly from any
+  // onClick, since it takes an argument — a `<button onClick={...}>` would
+  // otherwise pass its MouseEvent through as `kind`.
+  function startAddForm(kind: AddKind) {
     setEditingTaskId(null);
-    setAddKind("משימה");
-    setFormValues(emptyFormValues(toISODate(today)));
+    setAddKind(kind);
+    const base = emptyFormValues(toISODate(today));
+    // A child may only ever add an item for themselves (see
+    // supabase/migrations/006_calendar_creator_and_child_insert_policies.sql).
+    const assignedTo = isChild ? currentDisplayName : base.assignedTo;
+    setFormValues({
+      ...base,
+      ...ADD_KIND_PRESETS[kind],
+      assignedTo,
+      requiresApproval: computeRequiresApproval(assignedTo),
+    });
     setActiveTab("הוספה");
+  }
+
+  function openAddForm() {
+    startAddForm("משימה");
+  }
+
+  // Entry point from the "יומן" tab's "+ הוספת אירוע" button — available to
+  // every role, including a child (unlike the bottom-nav "הוספה" tab and
+  // TodayView's quick-add, both of which stay admin/parent-only).
+  function openAddFormForCalendarEvent() {
+    startAddForm("אירוע");
   }
 
   function openEditForm(task: Task) {
@@ -227,16 +257,20 @@ export default function Home() {
       date: task.date,
       time: task.time,
       endTime: task.endTime ?? "",
+      location: task.location ?? "",
       points: String(task.points),
       isRecurring: task.isRecurring,
       recurrence: task.recurrence,
       notes: task.notes,
       status: task.status,
+      requiresApproval: task.requiresApproval,
       rideRider: task.rideRider ?? "",
       rideDriverThere: task.rideDriverThere ?? "",
       rideDriverBack: task.rideDriverBack ?? "",
       pickupLocation: task.pickupLocation ?? "",
       returnLocation: task.returnLocation ?? "",
+      ridePickupTime: task.ridePickupTime ?? "",
+      rideReturnTime: task.rideReturnTime ?? "",
     });
     setActiveTab("הוספה");
   }
@@ -276,14 +310,11 @@ export default function Home() {
         if (editingTaskId) {
           await updateFamilyTask(editingTaskId, submittedValues, membersByName);
         } else {
-          const requiresApproval = computeRequiresApproval(
-            formValues.assignedTo
-          );
           await insertFamilyTask(
             submittedValues,
             familySession.family.id,
             familySession.currentMember.id,
-            requiresApproval,
+            formValues.requiresApproval,
             membersByName
           );
         }
@@ -308,11 +339,13 @@ export default function Home() {
                 date: formValues.date,
                 time: formValues.time,
                 endTime: formValues.endTime || undefined,
+                location: formValues.location.trim() || undefined,
                 points,
                 isRecurring: formValues.isRecurring,
                 recurrence,
                 notes: formValues.notes.trim(),
                 status: formValues.status,
+                requiresApproval: formValues.requiresApproval,
                 rideRider: isRide ? formValues.rideRider.trim() : undefined,
                 rideDriverThere: isRide
                   ? formValues.rideDriverThere.trim()
@@ -325,6 +358,12 @@ export default function Home() {
                   : undefined,
                 returnLocation: isRide
                   ? formValues.returnLocation.trim()
+                  : undefined,
+                ridePickupTime: isRide
+                  ? formValues.ridePickupTime || undefined
+                  : undefined,
+                rideReturnTime: isRide
+                  ? formValues.rideReturnTime || undefined
                   : undefined,
               }
             : task
@@ -339,12 +378,13 @@ export default function Home() {
         date: formValues.date,
         time: formValues.time,
         endTime: formValues.endTime || undefined,
+        location: formValues.location.trim() || undefined,
         status: "פתוחה",
         points,
         isRecurring: formValues.isRecurring,
         recurrence,
         notes: formValues.notes.trim(),
-        requiresApproval: computeRequiresApproval(formValues.assignedTo),
+        requiresApproval: formValues.requiresApproval,
         rideRider: isRide ? formValues.rideRider.trim() : undefined,
         rideDriverThere: isRide
           ? formValues.rideDriverThere.trim()
@@ -355,6 +395,12 @@ export default function Home() {
           : undefined,
         returnLocation: isRide
           ? formValues.returnLocation.trim()
+          : undefined,
+        ridePickupTime: isRide
+          ? formValues.ridePickupTime || undefined
+          : undefined,
+        rideReturnTime: isRide
+          ? formValues.rideReturnTime || undefined
           : undefined,
       };
       setTasks((prev) => [...prev, newTask]);
@@ -559,6 +605,7 @@ export default function Home() {
               canMarkDone={canMarkTaskDone}
               onMarkDone={handleMarkDone}
               onEdit={openEditForm}
+              onAddEvent={openAddFormForCalendarEvent}
             />
           )}
 
@@ -596,7 +643,7 @@ export default function Home() {
             />
           )}
 
-          {activeTab === "הוספה" && canManageTasks && (
+          {activeTab === "הוספה" && (canManageTasks || isChild) && (
             <AddView
               isEditing={!!editingTaskId}
               addKind={addKind}
@@ -605,6 +652,8 @@ export default function Home() {
               onChange={setFormValues}
               onSubmit={handleFormSubmit}
               onCancel={handleFormCancel}
+              members={formMembers}
+              restrictAssignedToName={isChild ? currentDisplayName : undefined}
             />
           )}
         </div>

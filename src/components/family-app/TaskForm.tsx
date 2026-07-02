@@ -1,11 +1,12 @@
 import type { SubmitEvent } from "react";
-import {
-  RECURRENCES,
-  TASK_STATUSES,
-  TASK_TYPES,
-  familyMembers,
-} from "@/data/familyDemoData";
-import type { Recurrence, TaskFormValues, TaskStatus, TaskType } from "@/types/familyApp";
+import { RECURRENCES, TASK_STATUSES, TASK_TYPES } from "@/data/familyDemoData";
+import type {
+  FamilyMember,
+  Recurrence,
+  TaskFormValues,
+  TaskStatus,
+  TaskType,
+} from "@/types/familyApp";
 
 export function TaskForm({
   values,
@@ -13,12 +14,21 @@ export function TaskForm({
   onSubmit,
   onCancel,
   isEditing,
+  members,
+  restrictAssignedToName,
 }: {
   values: TaskFormValues;
   onChange: (values: TaskFormValues) => void;
   onSubmit: (e: SubmitEvent<HTMLFormElement>) => void;
   onCancel: () => void;
   isEditing: boolean;
+  // The real (or demo) family member list, with roles — used to pick a
+  // sensible "requires approval" default/lock when the assignee is a child.
+  members: FamilyMember[];
+  // Set for a child adding their own item: locks the assignee field to just
+  // their own name, since a child may only ever create items for themselves
+  // (see supabase/migrations/006_calendar_creator_and_child_insert_policies.sql).
+  restrictAssignedToName?: string;
 }) {
   function update<K extends keyof TaskFormValues>(
     key: K,
@@ -26,6 +36,12 @@ export function TaskForm({
   ) {
     onChange({ ...values, [key]: value });
   }
+
+  const assignableMembers = restrictAssignedToName
+    ? members.filter((m) => m.name === restrictAssignedToName)
+    : members;
+  const assigneeRole = members.find((m) => m.name === values.assignedTo)?.role;
+  const requiresApprovalLocked = assigneeRole === "child";
 
   return (
     <form
@@ -46,7 +62,16 @@ export function TaskForm({
           סוג
           <select
             value={values.type}
-            onChange={(e) => update("type", e.target.value as TaskType)}
+            onChange={(e) => {
+              const type = e.target.value as TaskType;
+              // Events don't earn points — clear any leftover value instead
+              // of silently submitting it while the field is hidden below.
+              onChange({
+                ...values,
+                type,
+                points: type === "אירוע" ? "0" : values.points,
+              });
+            }}
             className="rounded-lg border border-card-border bg-background px-3 py-2.5 text-sm"
           >
             {TASK_TYPES.map((type) => (
@@ -57,13 +82,22 @@ export function TaskForm({
           </select>
         </label>
         <label className="flex flex-col gap-1 text-sm">
-          אחראי
+          אחראי / בן משפחה
           <select
             value={values.assignedTo}
-            onChange={(e) => update("assignedTo", e.target.value)}
-            className="rounded-lg border border-card-border bg-background px-3 py-2.5 text-sm"
+            disabled={!!restrictAssignedToName}
+            onChange={(e) => {
+              const assignedTo = e.target.value;
+              const role = members.find((m) => m.name === assignedTo)?.role;
+              onChange({
+                ...values,
+                assignedTo,
+                requiresApproval: role === "child",
+              });
+            }}
+            className="rounded-lg border border-card-border bg-background px-3 py-2.5 text-sm disabled:opacity-60"
           >
-            {familyMembers.map((member) => (
+            {assignableMembers.map((member) => (
               <option key={member.name} value={member.name}>
                 {member.name}
               </option>
@@ -97,6 +131,14 @@ export function TaskForm({
             type="time"
             value={values.endTime}
             onChange={(e) => update("endTime", e.target.value)}
+            className="rounded-lg border border-card-border bg-background px-3 py-2.5 text-sm"
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-sm">
+          מיקום
+          <input
+            value={values.location}
+            onChange={(e) => update("location", e.target.value)}
             className="rounded-lg border border-card-border bg-background px-3 py-2.5 text-sm"
           />
         </label>
@@ -144,18 +186,54 @@ export function TaskForm({
                 className="rounded-lg border border-card-border bg-card px-3 py-2.5 text-sm"
               />
             </label>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="flex flex-col gap-1 text-sm">
+                שעת איסוף
+                <input
+                  type="time"
+                  value={values.ridePickupTime}
+                  onChange={(e) => update("ridePickupTime", e.target.value)}
+                  className="rounded-lg border border-card-border bg-card px-3 py-2.5 text-sm"
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                שעת חזרה
+                <input
+                  type="time"
+                  value={values.rideReturnTime}
+                  onChange={(e) => update("rideReturnTime", e.target.value)}
+                  className="rounded-lg border border-card-border bg-card px-3 py-2.5 text-sm"
+                />
+              </label>
+            </div>
           </div>
         )}
 
-        <label className="flex flex-col gap-1 text-sm">
-          נקודות
+        {values.type !== "אירוע" && (
+          <label className="flex flex-col gap-1 text-sm">
+            נקודות
+            <input
+              type="number"
+              min={0}
+              value={values.points}
+              onChange={(e) => update("points", e.target.value)}
+              className="rounded-lg border border-card-border bg-background px-3 py-2.5 text-sm"
+            />
+          </label>
+        )}
+        <label className="flex items-center gap-2 text-sm">
           <input
-            type="number"
-            min={0}
-            value={values.points}
-            onChange={(e) => update("points", e.target.value)}
-            className="rounded-lg border border-card-border bg-background px-3 py-2.5 text-sm"
+            type="checkbox"
+            checked={requiresApprovalLocked ? true : values.requiresApproval}
+            disabled={requiresApprovalLocked}
+            onChange={(e) => update("requiresApproval", e.target.checked)}
           />
+          דורש אישור הורה
+          {requiresApprovalLocked && (
+            <span className="text-[11px] text-muted">
+              (תמיד נדרש אישור למשימות של ילד/ה)
+            </span>
+          )}
         </label>
         <label className="flex items-center gap-2 text-sm">
           <input

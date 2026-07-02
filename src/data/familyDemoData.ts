@@ -86,7 +86,15 @@ export const ADD_KINDS: readonly AddKind[] = [
 
 export const ADD_KIND_PRESETS: Record<AddKind, Partial<TaskFormValues>> = {
   משימה: { type: "משימת בית", isRecurring: false, recurrence: "לא חוזרת" },
-  אירוע: { type: "אירוע", isRecurring: false, recurrence: "לא חוזרת" },
+  // Events don't earn points, so switching to this preset clears any
+  // leftover value instead of silently submitting it while the field is
+  // hidden (see TaskForm's points field, only shown when type !== "אירוע").
+  אירוע: {
+    type: "אירוע",
+    isRecurring: false,
+    recurrence: "לא חוזרת",
+    points: "0",
+  },
   הסעה: { type: "הסעה", isRecurring: false, recurrence: "לא חוזרת" },
   תור: { type: "תור", isRecurring: false, recurrence: "לא חוזרת" },
   "משימה חוזרת": {
@@ -311,15 +319,19 @@ export function emptyFormValues(dateStr: string): TaskFormValues {
     date: dateStr,
     time: "08:00",
     endTime: "",
+    location: "",
     points: "1",
     isRecurring: false,
     recurrence: "לא חוזרת",
     notes: "",
     status: "פתוחה",
+    requiresApproval: CHILDREN.includes(CHILDREN[0]),
     rideRider: "",
     rideDriverThere: "",
     rideDriverBack: "",
     pickupLocation: "",
     returnLocation: "",
+    ridePickupTime: "",
+    rideReturnTime: "",
   };
 }

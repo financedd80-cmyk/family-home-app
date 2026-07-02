@@ -52,11 +52,14 @@ export type Task = {
   // Supabase; for demo/local tasks it's computed the same way it always was
   // (assignee is one of CHILDREN).
   requiresApproval: boolean;
+  location?: string;
   rideRider?: string;
   rideDriverThere?: string;
   rideDriverBack?: string;
   pickupLocation?: string;
   returnLocation?: string;
+  ridePickupTime?: string;
+  rideReturnTime?: string;
 };
 
 export type TaskFormValues = {
@@ -66,14 +69,18 @@ export type TaskFormValues = {
   date: string;
   time: string;
   endTime: string;
+  location: string;
   points: string;
   isRecurring: boolean;
   recurrence: Recurrence;
   notes: string;
   status: TaskStatus;
+  requiresApproval: boolean;
   rideRider: string;
   rideDriverThere: string;
   rideDriverBack: string;
   pickupLocation: string;
   returnLocation: string;
+  ridePickupTime: string;
+  rideReturnTime: string;
 };

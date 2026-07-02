@@ -131,6 +131,10 @@ export function dbTaskToTask(
     date: row.date,
     time: trimTime(row.start_time) ?? "",
     endTime: trimTime(row.end_time),
+    // The general "location" field from the calendar form reuses the
+    // pre-existing (and previously unused) tasks.description column — no
+    // schema change needed for it.
+    location: row.description ?? undefined,
     status: DB_STATUS_TO_TASK_STATUS[row.status],
     points: row.points,
     isRecurring: row.is_recurring,
@@ -148,6 +152,12 @@ export function dbTaskToTask(
       : undefined,
     pickupLocation: transportation?.pickup_location ?? undefined,
     returnLocation: transportation?.dropoff_location ?? undefined,
+    ridePickupTime: transportation?.pickup_time
+      ? trimTime(transportation.pickup_time)
+      : undefined,
+    rideReturnTime: transportation?.return_time
+      ? trimTime(transportation.return_time)
+      : undefined,
   };
 }
 
@@ -168,6 +178,7 @@ export function taskFormValuesToDbInsert(
     date: values.date,
     start_time: values.time || null,
     end_time: values.endTime || null,
+    description: values.location.trim() || null,
     points: Number(values.points) || 0,
     requires_approval: requiresApproval,
     is_recurring: values.isRecurring,
@@ -189,7 +200,9 @@ export function taskFormValuesToDbUpdate(
     date: values.date,
     start_time: values.time || null,
     end_time: values.endTime || null,
+    description: values.location.trim() || null,
     points: Number(values.points) || 0,
+    requires_approval: values.requiresApproval,
     is_recurring: values.isRecurring,
     recurrence:
       RECURRENCE_TO_DB[values.isRecurring ? values.recurrence : "לא חוזרת"],
@@ -209,8 +222,11 @@ export function transportationValuesToDbPayload(
     return_by_member_id: membersByName.get(values.rideDriverBack) ?? null,
     pickup_location: values.pickupLocation.trim() || null,
     dropoff_location: values.returnLocation.trim() || null,
-    pickup_time: values.time || null,
-    return_time: values.endTime || null,
+    // Falls back to the task's general start/end time when the ride-specific
+    // pickup/return time fields are left blank, matching the previous
+    // behavior before those fields existed.
+    pickup_time: values.ridePickupTime || values.time || null,
+    return_time: values.rideReturnTime || values.endTime || null,
     notes: values.notes.trim() || null,
   };
 }

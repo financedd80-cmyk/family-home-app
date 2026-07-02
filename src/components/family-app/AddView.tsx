@@ -1,6 +1,6 @@
 import type { SubmitEvent } from "react";
 import { ADD_KINDS } from "@/data/familyDemoData";
-import type { AddKind, TaskFormValues } from "@/types/familyApp";
+import type { AddKind, FamilyMember, TaskFormValues } from "@/types/familyApp";
 import { FilterButtons } from "./FilterButtons";
 import { TaskForm } from "./TaskForm";
 
@@ -12,6 +12,8 @@ export function AddView({
   onChange,
   onSubmit,
   onCancel,
+  members,
+  restrictAssignedToName,
 }: {
   isEditing: boolean;
   addKind: AddKind;
@@ -20,6 +22,8 @@ export function AddView({
   onChange: (values: TaskFormValues) => void;
   onSubmit: (e: SubmitEvent<HTMLFormElement>) => void;
   onCancel: () => void;
+  members: FamilyMember[];
+  restrictAssignedToName?: string;
 }) {
   return (
     <div className="flex flex-col gap-4">
@@ -43,6 +47,8 @@ export function AddView({
         onSubmit={onSubmit}
         onCancel={onCancel}
         isEditing={isEditing}
+        members={members}
+        restrictAssignedToName={restrictAssignedToName}
       />
     </div>
   );

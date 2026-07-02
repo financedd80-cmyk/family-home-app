@@ -38,6 +38,9 @@ export function TaskCard({
           </span>
         )}
       </div>
+      {task.location && (
+        <p className="text-xs text-muted">מיקום: {task.location}</p>
+      )}
       {ride && <p className="text-xs text-muted">{ride}</p>}
       {task.notes && <p className="text-xs text-muted">{task.notes}</p>}
       <div className="flex flex-wrap items-center gap-2">

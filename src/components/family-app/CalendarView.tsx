@@ -20,6 +20,7 @@ export function CalendarView({
   canMarkDone,
   onMarkDone,
   onEdit,
+  onAddEvent,
 }: {
   today: Date;
   tasks: Task[];
@@ -27,6 +28,10 @@ export function CalendarView({
   canMarkDone: (task: Task) => boolean;
   onMarkDone: (id: string) => void;
   onEdit: (task: Task) => void;
+  // Available to every connected role (admin/parent/child) — a child may add
+  // their own calendar item even though the general "הוספה" tab stays
+  // hidden for them (see supabase/migrations/006_calendar_creator_and_child_insert_policies.sql).
+  onAddEvent: () => void;
 }) {
   const [calendarView, setCalendarView] =
     useState<(typeof TIMEFRAMES)[number]>("השבוע");
@@ -67,6 +72,13 @@ export function CalendarView({
       />
       <button
         type="button"
+        onClick={onAddEvent}
+        className="w-full rounded-2xl bg-accent px-4 py-3 text-sm font-semibold text-white shadow-sm"
+      >
+        + הוספת אירוע
+      </button>
+      <button
+        type="button"
         disabled
         className="w-full cursor-not-allowed rounded-2xl border border-dashed border-card-border bg-card px-4 py-2.5 text-xs font-medium text-muted"
       >
@@ -87,7 +99,7 @@ export function CalendarView({
               </div>
               {group.tasks.length === 0 ? (
                 <p className="rounded-xl border border-dashed border-card-border bg-card p-3 text-center text-xs text-muted">
-                  אין משימות ביום זה
+                  אין אירועים ביום הזה. אפשר להוסיף אירוע חדש.
                 </p>
               ) : (
                 <ul className="flex flex-col gap-2">
