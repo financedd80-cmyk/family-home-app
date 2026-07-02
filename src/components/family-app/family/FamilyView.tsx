@@ -8,7 +8,7 @@ import type {
   SupaFamily,
 } from "@/hooks/useFamilySession";
 import type { FamilyMember } from "@/types/familyApp";
-import { avatarColor, getPermissions, roleLabel } from "./utils";
+import { avatarColor, getPermissions, roleLabel } from "../shared/utils";
 
 const CALENDAR_NOTES = [
   "כבר אפשר להוסיף אירוע בודד ליומן הטלפון — שיתוף, Google Calendar או הורדת קובץ — דרך כרטיס האירוע בטאב ׳יומן׳.",

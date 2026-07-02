@@ -1,5 +1,5 @@
 import type { Task } from "@/types/familyApp";
-import { TaskCard } from "../TaskCard";
+import { TaskCard } from "../tasks/TaskCard";
 
 // Shared by day view (one call, full detail) and week view (one call per
 // day, shorter list) — splits into a time-sorted section (time shown as its

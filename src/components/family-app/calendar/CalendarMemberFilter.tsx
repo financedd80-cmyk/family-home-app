@@ -1,4 +1,4 @@
-import { memberDotColor } from "../utils";
+import { memberDotColor } from "../shared/utils";
 
 export function CalendarMemberFilter<T extends string>({
   options,

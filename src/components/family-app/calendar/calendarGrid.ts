@@ -1,6 +1,6 @@
 import { FAMILY_WIDE_ASSIGNEE, MEMBER_FILTERS } from "@/data/familyDemoData";
 import type { Task } from "@/types/familyApp";
-import { addDays, memberDotColor, startOfWeek, toISODate } from "../utils";
+import { addDays, memberDotColor, startOfWeek, toISODate } from "../shared/utils";
 
 export type MonthGridDay = {
   date: Date;

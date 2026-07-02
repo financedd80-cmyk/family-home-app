@@ -16,14 +16,14 @@ import type {
   Task,
   TaskFormValues,
 } from "@/types/familyApp";
-import { AddView } from "@/components/family-app/AddView";
-import { BottomNav } from "@/components/family-app/BottomNav";
+import { AddView } from "@/components/family-app/tasks/AddView";
+import { BottomNav } from "@/components/family-app/shared/BottomNav";
 import { CalendarView } from "@/components/family-app/CalendarView";
-import { FamilyView } from "@/components/family-app/FamilyView";
-import { RewardsView } from "@/components/family-app/RewardsView";
-import { TasksView } from "@/components/family-app/TasksView";
+import { FamilyView } from "@/components/family-app/family/FamilyView";
+import { RewardsView } from "@/components/family-app/rewards/RewardsView";
+import { TasksView } from "@/components/family-app/tasks/TasksView";
 import { TodayView } from "@/components/family-app/TodayView";
-import { avatarColor, toISODate } from "@/components/family-app/utils";
+import { avatarColor, toISODate } from "@/components/family-app/shared/utils";
 import { useFamilySession } from "@/hooks/useFamilySession";
 import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 import {

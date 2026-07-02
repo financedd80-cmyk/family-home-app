@@ -1,12 +1,12 @@
 import type { Task } from "@/types/familyApp";
-import { TaskCard } from "./TaskCard";
+import { TaskCard } from "./tasks/TaskCard";
 import {
   formatDateDisplay,
   formatDateHeading,
   formatTimeLabel,
   sortByDateTime,
   toISODate,
-} from "./utils";
+} from "./shared/utils";
 
 function TaskListSection({
   title,

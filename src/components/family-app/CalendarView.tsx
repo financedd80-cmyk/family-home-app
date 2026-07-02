@@ -18,8 +18,8 @@ import { CalendarDayStrip } from "./calendar/CalendarDayStrip";
 import { CalendarHeader } from "./calendar/CalendarHeader";
 import { CalendarMemberFilter } from "./calendar/CalendarMemberFilter";
 import { CalendarMonthGrid } from "./calendar/CalendarMonthGrid";
-import { FilterButtons } from "./FilterButtons";
-import { TaskCard } from "./TaskCard";
+import { FilterButtons } from "./shared/FilterButtons";
+import { TaskCard } from "./tasks/TaskCard";
 import {
   addDays,
   formatDateDisplay,
@@ -27,7 +27,7 @@ import {
   isInTimeframe,
   startOfWeek,
   toISODate,
-} from "./utils";
+} from "./shared/utils";
 
 export function CalendarView({
   today,

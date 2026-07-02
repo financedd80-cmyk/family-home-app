@@ -10,7 +10,7 @@ import {
   formatTimeLabel,
   memberTagColor,
   rideSummary,
-} from "./utils";
+} from "../shared/utils";
 
 export function TaskCard({
   task,

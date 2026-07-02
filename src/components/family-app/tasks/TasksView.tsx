@@ -6,9 +6,9 @@ import {
   TYPE_FILTERS,
 } from "@/data/familyDemoData";
 import type { Task } from "@/types/familyApp";
-import { FilterButtons } from "./FilterButtons";
+import { FilterButtons } from "../shared/FilterButtons";
 import { TaskCard } from "./TaskCard";
-import { sortByDateTime } from "./utils";
+import { sortByDateTime } from "../shared/utils";
 
 export function TasksView({
   tasks,

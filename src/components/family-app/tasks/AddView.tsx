@@ -1,7 +1,7 @@
 import type { SubmitEvent } from "react";
 import { ADD_KINDS } from "@/data/familyDemoData";
 import type { AddKind, FamilyMember, TaskFormValues } from "@/types/familyApp";
-import { FilterButtons } from "./FilterButtons";
+import { FilterButtons } from "../shared/FilterButtons";
 import { TaskForm } from "./TaskForm";
 
 export function AddView({

@@ -1,5 +1,5 @@
 import type { Task } from "@/types/familyApp";
-import { rideSummary } from "@/components/family-app/utils";
+import { rideSummary } from "@/components/family-app/shared/utils";
 
 // Exports a single Task as a standalone .ics file the phone's own calendar
 // app can import — this is a one-way, client-side-only export. It does not

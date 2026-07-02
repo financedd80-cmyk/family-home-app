@@ -1,5 +1,5 @@
 import { familyMembers } from "@/data/familyDemoData";
-import { avatarColor, roleLabel } from "./utils";
+import { avatarColor, roleLabel } from "../shared/utils";
 
 export function RewardsView({
   isAdmin,
