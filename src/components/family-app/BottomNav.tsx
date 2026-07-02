@@ -4,13 +4,17 @@ import type { ActiveTab } from "@/types/familyApp";
 export function BottomNav({
   activeTab,
   onTabClick,
+  tabs = TABS,
+  tabLabel,
 }: {
   activeTab: ActiveTab;
   onTabClick: (tab: ActiveTab) => void;
+  tabs?: readonly ActiveTab[];
+  tabLabel?: (tab: ActiveTab) => string;
 }) {
   return (
-    <nav className="grid grid-cols-5 gap-1 border-t border-card-border bg-card px-1 py-2">
-      {TABS.map((tab) => (
+    <nav className="grid grid-cols-1 gap-1 border-t border-card-border bg-card px-1 py-2" style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}>
+      {tabs.map((tab) => (
         <button
           key={tab}
           type="button"
@@ -24,7 +28,7 @@ export function BottomNav({
               activeTab === tab ? "bg-accent" : "bg-transparent"
             }`}
           />
-          {tab}
+          {tabLabel ? tabLabel(tab) : tab}
         </button>
       ))}
     </nav>

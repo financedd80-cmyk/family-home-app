@@ -8,6 +8,7 @@ import {
   currentUser,
   emptyFormValues,
   familyMembers,
+  TABS,
 } from "@/data/familyDemoData";
 import type {
   ActiveTab,
@@ -24,7 +25,7 @@ import { TasksView } from "@/components/family-app/TasksView";
 import { TodayView } from "@/components/family-app/TodayView";
 import { avatarColor, toISODate } from "@/components/family-app/utils";
 import { useFamilySession } from "@/hooks/useFamilySession";
-import { isSupabaseConfigured } from "@/lib/supabaseClient";
+import { isSupabaseConfigured, supabase } from "@/lib/supabaseClient";
 import {
   fetchFamilyTasks,
   insertFamilyTask,
@@ -71,6 +72,30 @@ export default function Home() {
       : currentUser.role;
   const canManageTasks = effectiveRole === "admin" || effectiveRole === "parent";
   const isAdmin = effectiveRole === "admin";
+  const isChild = effectiveRole === "child";
+
+  // The logged-in member's own display name (demo admin otherwise). Used to
+  // scope a child's "mark done" button and task list to their own tasks —
+  // matches the RLS split in
+  // supabase/migrations/005_add_child_permissions.sql, where a child can
+  // only ever update a task assigned to them.
+  const currentDisplayName =
+    !demoMode && familySession.currentMember
+      ? familySession.currentMember.displayName
+      : currentUser.name;
+
+  function canMarkTaskDone(task: Task) {
+    return canManageTasks || task.assignedTo === currentDisplayName;
+  }
+
+  const visibleTabs = isChild
+    ? TABS.filter((tab) => tab !== "הוספה" && tab !== "משפחה")
+    : TABS;
+
+  function tabLabel(tab: ActiveTab) {
+    if (isChild && tab === "משימות") return "המשימות שלי";
+    return tab;
+  }
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [tasksLoading, setTasksLoading] = useState(true);
@@ -463,20 +488,39 @@ export default function Home() {
     setWeeklyBaseline({});
   }
 
+  // Available from the header regardless of role/tab, so a child (who has
+  // no "משפחה" tab) can still sign out — that tab's own logout button (see
+  // FamilyView) stays for admin/parent, this isn't a replacement for it.
+  async function handleLogout() {
+    if (!supabase) return;
+    await supabase.auth.signOut();
+  }
+
   return (
     <div className="min-h-screen bg-card-border/30 sm:flex sm:items-center sm:justify-center sm:py-8">
       <div className="mx-auto flex h-screen w-full max-w-md flex-col bg-background sm:h-[840px] sm:overflow-hidden sm:rounded-[2.5rem] sm:border sm:border-card-border sm:shadow-2xl">
         <header className="flex items-center justify-between border-b border-card-border bg-card px-4 py-3">
           <span className="text-lg font-bold">הבית שלנו</span>
-          <div className="flex items-center gap-2 rounded-full bg-background px-2 py-1">
-            <span
-              className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold ${avatarColor(
-                currentUser.name
-              )}`}
-            >
-              {currentUser.name[0]}
-            </span>
-            <span className="text-xs font-medium">{currentUser.name}</span>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 rounded-full bg-background px-2 py-1">
+              <span
+                className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold ${avatarColor(
+                  currentDisplayName
+                )}`}
+              >
+                {currentDisplayName[0]}
+              </span>
+              <span className="text-xs font-medium">{currentDisplayName}</span>
+            </div>
+            {familySession.session && (
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="rounded-full border border-card-border px-2.5 py-1 text-[11px] font-medium text-muted"
+              >
+                יציאה
+              </button>
+            )}
           </div>
         </header>
 
@@ -497,6 +541,7 @@ export default function Home() {
               today={today}
               tasks={tasks}
               canManageTasks={canManageTasks}
+              canMarkDone={canMarkTaskDone}
               onQuickAdd={openAddForm}
               onMarkDone={handleMarkDone}
               onEdit={openEditForm}
@@ -511,6 +556,7 @@ export default function Home() {
               today={today}
               tasks={tasks}
               canManageTasks={canManageTasks}
+              canMarkDone={canMarkTaskDone}
               onMarkDone={handleMarkDone}
               onEdit={openEditForm}
             />
@@ -520,8 +566,10 @@ export default function Home() {
             <TasksView
               tasks={tasks}
               canManageTasks={canManageTasks}
+              canMarkDone={canMarkTaskDone}
               onMarkDone={handleMarkDone}
               onEdit={openEditForm}
+              ownTasksOnlyFor={isChild ? currentDisplayName : undefined}
             />
           )}
 
@@ -532,10 +580,11 @@ export default function Home() {
               weeklyPointsFor={weeklyPointsFor}
               onResetWeekly={handleResetWeekly}
               onResetAllPoints={handleResetAllPoints}
+              highlightName={isChild ? currentDisplayName : undefined}
             />
           )}
 
-          {activeTab === "משפחה" && (
+          {activeTab === "משפחה" && !isChild && (
             <FamilyView
               session={familySession.session}
               authChecked={familySession.authChecked}
@@ -547,7 +596,7 @@ export default function Home() {
             />
           )}
 
-          {activeTab === "הוספה" && (
+          {activeTab === "הוספה" && canManageTasks && (
             <AddView
               isEditing={!!editingTaskId}
               addKind={addKind}
@@ -560,7 +609,12 @@ export default function Home() {
           )}
         </div>
 
-        <BottomNav activeTab={activeTab} onTabClick={handleTabClick} />
+        <BottomNav
+          activeTab={activeTab}
+          onTabClick={handleTabClick}
+          tabs={visibleTabs}
+          tabLabel={tabLabel}
+        />
       </div>
     </div>
   );

@@ -7,12 +7,17 @@ export function RewardsView({
   weeklyPointsFor,
   onResetWeekly,
   onResetAllPoints,
+  highlightName,
 }: {
   isAdmin: boolean;
   cumulativePoints: (name: string) => number;
   weeklyPointsFor: (name: string) => number;
   onResetWeekly: () => void;
   onResetAllPoints: () => void;
+  // The viewer's own name (child view only) — their row gets emphasized
+  // instead of hiding everyone else's, per the request that a child should
+  // see "just their own points, or at least have them highlighted".
+  highlightName?: string;
 }) {
   return (
     <div className="flex flex-col gap-4">
@@ -43,7 +48,11 @@ export function RewardsView({
         {familyMembers.map((member) => (
           <li
             key={member.name}
-            className="flex items-center justify-between gap-3 rounded-2xl border border-card-border bg-card p-4 shadow-sm"
+            className={`flex items-center justify-between gap-3 rounded-2xl border p-4 shadow-sm ${
+              member.name === highlightName
+                ? "border-accent2 bg-accent2-soft/40"
+                : "border-card-border bg-card"
+            }`}
           >
             <div className="flex items-center gap-2">
               <span

@@ -13,6 +13,7 @@ function TaskListSection({
   tasks,
   emptyText,
   canEdit,
+  canMarkDone,
   onMarkDone,
   onEdit,
 }: {
@@ -20,6 +21,7 @@ function TaskListSection({
   tasks: Task[];
   emptyText: string;
   canEdit: boolean;
+  canMarkDone: (task: Task) => boolean;
   onMarkDone: (id: string) => void;
   onEdit: (task: Task) => void;
 }) {
@@ -37,6 +39,7 @@ function TaskListSection({
               key={task.id}
               task={task}
               canEdit={canEdit}
+              canMarkDone={canMarkDone(task)}
               onMarkDone={() => onMarkDone(task.id)}
               onEdit={() => onEdit(task)}
             />
@@ -51,6 +54,7 @@ export function TodayView({
   today,
   tasks,
   canManageTasks,
+  canMarkDone,
   onQuickAdd,
   onMarkDone,
   onEdit,
@@ -61,6 +65,7 @@ export function TodayView({
   today: Date;
   tasks: Task[];
   canManageTasks: boolean;
+  canMarkDone: (task: Task) => boolean;
   onQuickAdd: () => void;
   onMarkDone: (id: string) => void;
   onEdit: (task: Task) => void;
@@ -90,19 +95,22 @@ export function TodayView({
         <p className="text-sm text-muted">מה קורה היום בבית</p>
       </div>
 
-      <button
-        type="button"
-        onClick={onQuickAdd}
-        className="w-full rounded-2xl bg-accent px-4 py-3 text-sm font-semibold text-white shadow-sm"
-      >
-        + הוספה מהירה
-      </button>
+      {canManageTasks && (
+        <button
+          type="button"
+          onClick={onQuickAdd}
+          className="w-full rounded-2xl bg-accent px-4 py-3 text-sm font-semibold text-white shadow-sm"
+        >
+          + הוספה מהירה
+        </button>
+      )}
 
       <TaskListSection
         title="משימות פתוחות להיום"
         tasks={openToday}
         emptyText="אין משימות פתוחות היום"
         canEdit={canManageTasks}
+        canMarkDone={canMarkDone}
         onMarkDone={onMarkDone}
         onEdit={onEdit}
       />
@@ -111,6 +119,7 @@ export function TodayView({
         tasks={ridesToday}
         emptyText="אין הסעות היום"
         canEdit={canManageTasks}
+        canMarkDone={canMarkDone}
         onMarkDone={onMarkDone}
         onEdit={onEdit}
       />
@@ -119,6 +128,7 @@ export function TodayView({
         tasks={eventsToday}
         emptyText="אין אירועים היום"
         canEdit={canManageTasks}
+        canMarkDone={canMarkDone}
         onMarkDone={onMarkDone}
         onEdit={onEdit}
       />

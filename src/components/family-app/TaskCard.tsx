@@ -4,11 +4,13 @@ import { STATUS_STYLES, formatTimeLabel, rideSummary } from "./utils";
 export function TaskCard({
   task,
   canEdit,
+  canMarkDone,
   onMarkDone,
   onEdit,
 }: {
   task: Task;
   canEdit: boolean;
+  canMarkDone: boolean;
   onMarkDone: () => void;
   onEdit: () => void;
 }) {
@@ -44,7 +46,7 @@ export function TaskCard({
             {task.points} נק׳
           </span>
         )}
-        {task.status === "פתוחה" && (
+        {task.status === "פתוחה" && canMarkDone && (
           <button
             type="button"
             onClick={onMarkDone}
